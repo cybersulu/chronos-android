@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.data.CategoryEntity
 
 data class CategoryDef(
     val name: String,
@@ -48,7 +49,10 @@ object CountdownCategories {
         CategoryDef(MILESTONE, Icons.Default.Flag, 0xFF8B5CF6, "Flag"),
         CategoryDef(TRAVEL, Icons.Default.Flight, 0xFF06B6D4, "Flight"),
         CategoryDef(WORK, Icons.Default.Work, 0xFF3B82F6, "Work"),
-        CategoryDef(PERSONAL, Icons.Default.Favorite, 0xFFF43F5E, "Favorite")
+        CategoryDef(PERSONAL, Icons.Default.Favorite, 0xFFF43F5E, "Favorite"),
+        CategoryDef("Fitness", Icons.Default.FitnessCenter, 0xFF10B981, "Fitness"),
+        CategoryDef("Birthday", Icons.Default.Cake, 0xFFEC4899, "Cake"),
+        CategoryDef("Gaming", Icons.Default.SportsEsports, 0xFF8B5CF6, "Gaming")
     )
 
     // Palette of selectable icons with user-friendly names
@@ -91,12 +95,18 @@ object CountdownCategories {
         0xFFEC4899  // Vibrant Pink
     )
 
-    // Thread-safe / fast lookup map for dynamic custom categories
-    private val customCategoriesMap = mutableMapOf<String, Pair<ImageVector, Long>>()
+    // Active lookup map for all categories (database values take precedence)
+    private val activeCategoriesMap = mutableMapOf<String, Pair<ImageVector, Long>>()
 
     fun registerCustomCategory(name: String, iconName: String, colorHex: Long) {
         val icon = getIconByName(iconName)
-        customCategoriesMap[name.lowercase()] = Pair(icon, colorHex)
+        activeCategoriesMap[name.lowercase()] = Pair(icon, colorHex)
+    }
+
+    fun updateFromEntities(entities: List<CategoryEntity>) {
+        for (item in entities) {
+            registerCustomCategory(item.name, item.iconName, item.colorHex)
+        }
     }
 
     fun getIconByName(iconName: String): ImageVector {
@@ -105,22 +115,29 @@ object CountdownCategories {
     }
 
     fun getIconForCategory(category: String): ImageVector {
+        // 1. User-customized or database category has highest precedence
+        val customMatch = activeCategoriesMap[category.lowercase()]
+        if (customMatch != null) return customMatch.first
+
+        // 2. Default hardcoded fallback
         val defaultMatch = DEFAULT_LIST.find { it.name.equals(category, ignoreCase = true) }
         if (defaultMatch != null) return defaultMatch.icon
 
-        val customMatch = customCategoriesMap[category.lowercase()]
-        if (customMatch != null) return customMatch.first
-
+        // 3. Fallback by name
         return getIconByName(category)
     }
 
     fun getColorHexForCategory(category: String): Long {
+        // 1. User-customized or database category has highest precedence
+        val customMatch = activeCategoriesMap[category.lowercase()]
+        if (customMatch != null) return customMatch.second
+
+        // 2. Default hardcoded fallback
         val defaultMatch = DEFAULT_LIST.find { it.name.equals(category, ignoreCase = true) }
         if (defaultMatch != null) return defaultMatch.colorHex
 
-        val customMatch = customCategoriesMap[category.lowercase()]
-        if (customMatch != null) return customMatch.second
-
-        return 0xFF6366F1
+        // 3. Deterministic default color for any other category
+        val index = (category.hashCode() and 0x7fffffff) % PRESET_COLORS.size
+        return PRESET_COLORS[index]
     }
 }

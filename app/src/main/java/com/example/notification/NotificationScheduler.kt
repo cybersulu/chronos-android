@@ -9,54 +9,46 @@ import com.example.data.CountdownEntity
 
 object NotificationScheduler {
 
+    private fun getRequestCode(timerId: Long, offsetMinutes: Int): Int {
+        // Deterministic collision-resistant request code
+        return ((timerId and 0xFFFL) shl 16 or (offsetMinutes.toLong() and 0xFFFFL)).toInt()
+    }
+
     fun scheduleAlert(context: Context, timer: CountdownEntity) {
-        if (!timer.notifyOnFinish) {
-            cancelAlert(context, timer.id)
-            return
-        }
+        // Cancel all existing scheduled alarms for this timer first
+        cancelAlert(context, timer.id)
+
+        if (!timer.notifyOnFinish) return
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
         val now = System.currentTimeMillis()
+        val alertOffsets = timer.getAlertMinutes()
 
-        // 1. Target alarm at exact zero time
-        if (timer.targetEpochMillis > now) {
-            val intent = Intent(context, CountdownAlertReceiver::class.java).apply {
-                action = "com.example.ACTION_COUNTDOWN_ALERT"
-                putExtra(CountdownAlertReceiver.EXTRA_TIMER_ID, timer.id)
-                putExtra(CountdownAlertReceiver.EXTRA_TIMER_TITLE, timer.title)
-                putExtra(CountdownAlertReceiver.EXTRA_IS_ADVANCE, false)
+        for (offsetMinutes in alertOffsets) {
+            val triggerTime = if (offsetMinutes == 0) {
+                timer.targetEpochMillis
+            } else {
+                timer.targetEpochMillis - (offsetMinutes * 60 * 1000L)
             }
 
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                timer.id.toInt(),
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-
-            setExactAlarm(alarmManager, timer.targetEpochMillis, pendingIntent)
-        }
-
-        // 2. Advance notice alarm if configured (e.g. 15m, 1h, 1d)
-        if (timer.notifyAdvanceMinutes > 0) {
-            val advanceTriggerTime = timer.targetEpochMillis - (timer.notifyAdvanceMinutes * 60 * 1000L)
-            if (advanceTriggerTime > now) {
-                val advanceIntent = Intent(context, CountdownAlertReceiver::class.java).apply {
+            if (triggerTime > now) {
+                val intent = Intent(context, CountdownAlertReceiver::class.java).apply {
                     action = "com.example.ACTION_COUNTDOWN_ALERT"
                     putExtra(CountdownAlertReceiver.EXTRA_TIMER_ID, timer.id)
                     putExtra(CountdownAlertReceiver.EXTRA_TIMER_TITLE, timer.title)
-                    putExtra(CountdownAlertReceiver.EXTRA_IS_ADVANCE, true)
-                    putExtra(CountdownAlertReceiver.EXTRA_ADVANCE_MINUTES, timer.notifyAdvanceMinutes)
+                    putExtra(CountdownAlertReceiver.EXTRA_IS_ADVANCE, offsetMinutes > 0)
+                    putExtra(CountdownAlertReceiver.EXTRA_ADVANCE_MINUTES, offsetMinutes)
                 }
 
-                val advancePendingIntent = PendingIntent.getBroadcast(
+                val requestCode = getRequestCode(timer.id, offsetMinutes)
+                val pendingIntent = PendingIntent.getBroadcast(
                     context,
-                    (timer.id + 100000).toInt(),
-                    advanceIntent,
+                    requestCode,
+                    intent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
 
-                setExactAlarm(alarmManager, advanceTriggerTime, advancePendingIntent)
+                setExactAlarm(alarmManager, triggerTime, pendingIntent)
             }
         }
     }
@@ -101,28 +93,41 @@ object NotificationScheduler {
 
     fun cancelAlert(context: Context, timerId: Long) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-
-        // Cancel target alarm
         val intent = Intent(context, CountdownAlertReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(
+
+        // Cancel across common preset & custom offset frequencies (up to 4 weeks out)
+        val commonOffsets = listOf(
+            0, 5, 10, 15, 20, 25, 30, 45, 60, 90, 120, 180, 240, 360, 480, 720,
+            1440, 2880, 4320, 5760, 7200, 8640, 10080, 14400, 20160, 30240, 40320
+        )
+        for (offset in commonOffsets) {
+            val requestCode = getRequestCode(timerId, offset)
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            )
+            if (pendingIntent != null) {
+                alarmManager.cancel(pendingIntent)
+            }
+        }
+
+        // Cancel legacy IDs
+        val legacyZero = PendingIntent.getBroadcast(
             context,
             timerId.toInt(),
             intent,
             PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
         )
-        if (pendingIntent != null) {
-            alarmManager.cancel(pendingIntent)
-        }
+        if (legacyZero != null) alarmManager.cancel(legacyZero)
 
-        // Cancel advance alarm
-        val advancePendingIntent = PendingIntent.getBroadcast(
+        val legacyAdvance = PendingIntent.getBroadcast(
             context,
             (timerId + 100000).toInt(),
             intent,
             PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
         )
-        if (advancePendingIntent != null) {
-            alarmManager.cancel(advancePendingIntent)
-        }
+        if (legacyAdvance != null) alarmManager.cancel(legacyAdvance)
     }
 }

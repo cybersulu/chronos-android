@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.content.Context
 import android.content.Intent
+import android.text.format.DateFormat
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -32,7 +33,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -62,6 +62,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.CountdownEntity
 import com.example.model.CountdownBreakdown
 import com.example.model.CountdownCategories
 import com.example.ui.components.ConfettiCelebrationOverlay
@@ -127,12 +128,12 @@ fun CountdownDetailScreen(
         return
     }
 
-    val accentColor = TimerColorPalette.getOrElse(timer.colorIndex) {
-        TimerColorPalette[0]
-    }
+    // Use the default Accent Color set for the timer's category
+    val accentColor = Color(CountdownCategories.getColorHexForCategory(timer.category))
+    val is24Hour = remember(context) { DateFormat.is24HourFormat(context) }
 
-    val breakdown = remember(timer.targetEpochMillis, timer.timeZoneId, tickerTime) {
-        CountdownBreakdown.compute(timer.targetEpochMillis, timer.timeZoneId)
+    val breakdown = remember(timer.targetEpochMillis, timer.timeZoneId, tickerTime, is24Hour) {
+        CountdownBreakdown.compute(timer.targetEpochMillis, timer.timeZoneId, is24Hour)
     }
 
     // Auto trigger celebration haptics when timer hits zero
@@ -150,7 +151,10 @@ fun CountdownDetailScreen(
     val localZdt = remember(timer.targetEpochMillis) {
         Instant.ofEpochMilli(timer.targetEpochMillis).atZone(ZoneId.systemDefault())
     }
-    val timeFormatter = remember { DateTimeFormatter.ofPattern("h:mm a (zzz)", Locale.getDefault()) }
+    val timeFormatter = remember(is24Hour) {
+        val pattern = if (is24Hour) "HH:mm (zzz)" else "h:mm a (zzz)"
+        DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
+    }
 
     Scaffold(
         topBar = {
@@ -389,61 +393,73 @@ fun CountdownDetailScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Action Buttons: Pin to Widget & Celebrate
-                Row(
+                // Alert Notifications Card
+                Spacer(modifier = Modifier.height(16.dp))
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 ) {
-                    Button(
-                        onClick = { viewModel.pinTimerToWidget(timer.id) },
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("button_pin_widget"),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = if (timer.isPinnedToWidget) {
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.tertiary,
-                                contentColor = MaterialTheme.colorScheme.onTertiary
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = null,
+                                tint = if (timer.notifyOnFinish) accentColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
                             )
-                        } else {
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = MaterialTheme.colorScheme.onSurface
+                            Text(
+                                text = "Alert Notifications",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Widgets,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (timer.isPinnedToWidget) "Pinned to Widget" else "Pin to Widget",
-                            fontWeight = FontWeight.Bold
-                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        val alerts = timer.getAlertMinutes()
+                        if (timer.notifyOnFinish && alerts.isNotEmpty()) {
+                            Text(
+                                text = alerts.joinToString(" • ") { CountdownEntity.formatAlertOffsetLabel(it) },
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        } else {
+                            Text(
+                                text = "No alert notifications scheduled",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
+                }
 
-                    OutlinedButton(
-                        onClick = {
-                            showConfetti = true
-                            triggerVibration()
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("button_celebrate"),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Celebration,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Celebrate")
-                    }
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Action Button: Celebrate
+                Button(
+                    onClick = {
+                        showConfetti = true
+                        triggerVibration()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .testTag("button_celebrate"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accentColor,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Celebration,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Celebrate", fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))

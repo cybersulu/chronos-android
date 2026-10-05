@@ -27,9 +27,6 @@ interface CountdownDao {
     @Query("SELECT * FROM countdown_timers WHERE id = :id LIMIT 1")
     suspend fun getTimerByIdSync(id: Long): CountdownEntity?
 
-    @Query("SELECT * FROM countdown_timers WHERE isPinnedToWidget = 1 LIMIT 1")
-    suspend fun getPinnedWidgetTimer(): CountdownEntity?
-
     @Query("SELECT * FROM countdown_timers ORDER BY orderIndex ASC LIMIT 1")
     suspend fun getFirstTimer(): CountdownEntity?
 
@@ -42,23 +39,14 @@ interface CountdownDao {
     @Update
     suspend fun updateTimers(timers: List<CountdownEntity>)
 
-    @Query("UPDATE countdown_timers SET isPinnedToWidget = 0")
-    suspend fun clearWidgetPins()
-
-    @Query("UPDATE countdown_timers SET isPinnedToWidget = 1 WHERE id = :id")
-    suspend fun setWidgetPin(id: Long)
-
-    @Transaction
-    suspend fun pinTimerToWidget(id: Long) {
-        clearWidgetPins()
-        setWidgetPin(id)
-    }
-
     @Delete
     suspend fun deleteTimer(timer: CountdownEntity)
 
     @Query("DELETE FROM countdown_timers WHERE id = :id")
     suspend fun deleteTimerById(id: Long)
+
+    @Query("UPDATE countdown_timers SET category = :newCategory WHERE category = :oldCategory COLLATE NOCASE")
+    suspend fun updateCategoryForTimers(oldCategory: String, newCategory: String)
 
     @Query("SELECT COUNT(*) FROM countdown_timers")
     suspend fun getCount(): Int

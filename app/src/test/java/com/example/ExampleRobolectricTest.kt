@@ -47,4 +47,31 @@ class ExampleRobolectricTest {
     assertEquals("DAYS", topThree.label2)
     assertEquals("HOURS", topThree.label3)
   }
+
+  @Test
+  fun `test default category accent colors`() {
+    val celebrationColor = com.example.model.CountdownCategories.getColorHexForCategory("Celebration")
+    assertEquals(0xFFF59E0BL, celebrationColor)
+
+    val travelColor = com.example.model.CountdownCategories.getColorHexForCategory("Travel")
+    assertEquals(0xFF06B6D4L, travelColor)
+  }
+
+  @Test
+  fun `test alert notification formatting and multiple alerts parsing`() {
+    assertEquals("At event time", com.example.data.CountdownEntity.formatAlertOffsetLabel(0))
+    assertEquals("15m before", com.example.data.CountdownEntity.formatAlertOffsetLabel(15))
+    assertEquals("1h before", com.example.data.CountdownEntity.formatAlertOffsetLabel(60))
+    assertEquals("1d before", com.example.data.CountdownEntity.formatAlertOffsetLabel(1440))
+
+    val timer = com.example.data.CountdownEntity(
+      title = "Test Event",
+      targetEpochMillis = System.currentTimeMillis() + 100000,
+      timeZoneId = "UTC",
+      category = "Travel",
+      alertMinutesList = "0,15,60,1440"
+    )
+    val alerts = timer.getAlertMinutes()
+    assertEquals(listOf(0, 15, 60, 1440), alerts)
+  }
 }

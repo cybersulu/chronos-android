@@ -21,7 +21,11 @@ data class CountdownBreakdown(
     val timeZoneDisplayName: String
 ) {
     companion object {
-        fun compute(targetEpochMillis: Long, timeZoneId: String): CountdownBreakdown {
+        fun compute(
+            targetEpochMillis: Long,
+            timeZoneId: String,
+            is24Hour: Boolean = false
+        ): CountdownBreakdown {
             val zone = try {
                 ZoneId.of(timeZoneId)
             } catch (e: Exception) {
@@ -60,7 +64,8 @@ data class CountdownBreakdown(
             val totalSeconds = Math.abs(Duration.between(now, target).seconds)
 
             val dateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d, yyyy", Locale.getDefault())
-            val timeFormatter = DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
+            val timePattern = if (is24Hour) "HH:mm" else "h:mm a"
+            val timeFormatter = DateTimeFormatter.ofPattern(timePattern, Locale.getDefault())
 
             val offset = zone.rules.getOffset(target.toInstant())
             val cleanName = zone.id.substringAfterLast('/').replace('_', ' ')

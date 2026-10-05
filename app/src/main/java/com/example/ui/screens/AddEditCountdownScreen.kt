@@ -2,7 +2,9 @@ package com.example.ui.screens
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,9 +31,12 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -43,6 +48,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -61,11 +67,16 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.CategoryEntity
+import com.example.data.CountdownEntity
+import com.example.model.CategoryDef
 import com.example.model.CountdownCategories
 import com.example.model.TimeZoneHelper
-import com.example.ui.components.AddCategoryDialog
+import com.example.ui.components.CategoryEditDialog
+import com.example.ui.components.CategoryCountItem
+import com.example.ui.components.CreateCustomAlertDialog
+import com.example.ui.components.ManageCategoriesSheet
 import com.example.ui.components.TimeZonePickerSheet
-import com.example.ui.theme.TimerColorPalette
 import com.example.ui.viewmodel.CountdownViewModel
 import java.time.Instant
 import java.time.LocalDate
@@ -98,23 +109,38 @@ fun AddEditCountdownScreen(
         ZonedDateTime.now(ZoneId.of(initialZoneId)).plusDays(7).withHour(12).withMinute(0).withSecond(0)
     }
 
+    val categoryCounts by viewModel.categoryCounts.collectAsState()
+
     var title by remember { mutableStateOf(existing?.title ?: "") }
     var selectedCategory by remember { mutableStateOf(existing?.category ?: "Milestone") }
-    var selectedColorIndex by remember { mutableIntStateOf(existing?.colorIndex ?: 0) }
     var selectedZoneId by remember { mutableStateOf(initialZoneId) }
     var selectedDate by remember { mutableStateOf(initialZdt.toLocalDate()) }
     var selectedTime by remember { mutableStateOf(initialZdt.toLocalTime()) }
     var notifyOnFinish by remember { mutableStateOf(existing?.notifyOnFinish ?: true) }
-    var notifyAdvanceMinutes by remember { mutableIntStateOf(existing?.notifyAdvanceMinutes ?: 0) }
-    var isPinnedToWidget by remember { mutableStateOf(existing?.isPinnedToWidget ?: false) }
+    val defaultPresetAlerts = remember { listOf(0, 15, 60, 1440, 10080) }
+    var selectedAlertMinutes by remember {
+        val initial = existing?.getAlertMinutes() ?: listOf(0)
+        mutableStateOf(if (initial.isEmpty()) setOf(0) else initial.toSet())
+    }
+    var availableAlerts by remember {
+        val existingAlerts = existing?.getAlertMinutes() ?: emptyList()
+        mutableStateOf((defaultPresetAlerts + existingAlerts).distinct().sorted())
+    }
+    var showCustomAlertDialog by remember { mutableStateOf(false) }
     var notes by remember { mutableStateOf(existing?.notes ?: "") }
 
     var titleError by remember { mutableStateOf(false) }
     var showTimeZoneSheet by remember { mutableStateOf(false) }
     var showAddCategoryDialog by remember { mutableStateOf(false) }
+    var showManageCategoriesSheet by remember { mutableStateOf(false) }
+    var categoryToEdit by remember { mutableStateOf<CategoryEntity?>(null) }
 
+    val is24Hour = remember(context) { DateFormat.is24HourFormat(context) }
     val dateFormatter = remember { DateTimeFormatter.ofPattern("EEE, MMM d, yyyy", Locale.getDefault()) }
-    val timeFormatter = remember { DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()) }
+    val timeFormatter = remember(is24Hour) {
+        val pattern = if (is24Hour) "HH:mm" else "h:mm a"
+        DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
+    }
 
     Scaffold(
         topBar = {
@@ -171,7 +197,7 @@ fun AddEditCountdownScreen(
                 )
             }
 
-            // Category Chips with Custom Categories & Add Button
+            // Category Section with Manage & Edit capability
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -185,73 +211,128 @@ fun AddEditCountdownScreen(
                     )
 
                     Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { showAddCategoryDialog = true }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                            .testTag("button_open_add_category_dialog"),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "New Category",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "New Category",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        TextButton(
+                            onClick = { showManageCategoriesSheet = true },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.testTag("button_manage_categories")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Manage", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    categoryToEdit = null
+                                    showAddCategoryDialog = true
+                                }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .testTag("button_open_add_category_dialog"),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "New Category",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "New",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
 
+                val allDisplayCategories = if (customCategories.isNotEmpty()) {
+                    customCategories.map {
+                        CategoryDef(
+                            name = it.name,
+                            icon = CountdownCategories.getIconByName(it.iconName),
+                            colorHex = it.colorHex,
+                            iconName = it.iconName
+                        )
+                    }
+                } else {
+                    CountdownCategories.DEFAULT_LIST
+                }
+
                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Default Categories
-                    CountdownCategories.DEFAULT_LIST.forEach { cat ->
+                    allDisplayCategories.forEach { cat ->
                         val isSelected = selectedCategory.equals(cat.name, ignoreCase = true)
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { selectedCategory = cat.name },
-                            label = { Text(cat.name) },
-                            leadingIcon = {
+                        val catColor = Color(cat.colorHex)
+                        val buttonShape = RoundedCornerShape(14.dp)
+
+                        Surface(
+                            modifier = Modifier
+                                .height(48.dp)
+                                .clip(buttonShape)
+                                .clickable { selectedCategory = cat.name }
+                                .testTag("category_chip_select_${cat.name.lowercase()}"),
+                            shape = buttonShape,
+                            color = if (isSelected) catColor.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(
+                                width = if (isSelected) 1.5.dp else 1.dp,
+                                color = if (isSelected) catColor else MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
                                 Icon(
                                     imageVector = cat.icon,
                                     contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = if (isSelected) Color(cat.colorHex) else MaterialTheme.colorScheme.onSurfaceVariant
+                                    modifier = Modifier.size(20.dp),
+                                    tint = if (isSelected) catColor else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                            },
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.testTag("category_chip_select_${cat.name.lowercase()}")
-                        )
-                    }
-
-                    // User Custom Categories
-                    customCategories.forEach { customCat ->
-                        val isSelected = selectedCategory.equals(customCat.name, ignoreCase = true)
-                        val icon = CountdownCategories.getIconByName(customCat.iconName)
-                        val color = Color(customCat.colorHex)
-
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { selectedCategory = customCat.name },
-                            label = { Text(customCat.name) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = icon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = if (isSelected) color else MaterialTheme.colorScheme.onSurfaceVariant
+                                Text(
+                                    text = cat.name,
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = if (isSelected) catColor else MaterialTheme.colorScheme.onSurface
                                 )
-                            },
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.testTag("category_chip_select_${customCat.name.lowercase()}")
-                        )
+                                if (isSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(CircleShape)
+                                            .clickable {
+                                                val found = customCategories.find { it.name.equals(cat.name, ignoreCase = true) }
+                                                categoryToEdit = found ?: CategoryEntity(
+                                                    name = cat.name,
+                                                    iconName = cat.iconName,
+                                                    colorHex = cat.colorHex
+                                                )
+                                                showAddCategoryDialog = true
+                                            }
+                                            .padding(3.dp)
+                                            .testTag("button_edit_category_${cat.name.lowercase()}"),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit Category",
+                                            tint = catColor,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -335,7 +416,7 @@ fun AddEditCountdownScreen(
                                     },
                                     selectedTime.hour,
                                     selectedTime.minute,
-                                    false
+                                    is24Hour
                                 ).show()
                             }
                             .testTag("button_pick_time"),
@@ -467,72 +548,134 @@ fun AddEditCountdownScreen(
                     }
 
                     if (notifyOnFinish) {
-                        Text(
-                            text = "Reminder Notice",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        val advanceOptions = listOf(
-                            0 to "At event time",
-                            15 to "15m before",
-                            60 to "1h before",
-                            1440 to "1d before",
-                            10080 to "1w before"
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Reminder Notices (Select Multiple)",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "${selectedAlertMinutes.size} active",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
 
                         FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            advanceOptions.forEach { (minutes, label) ->
-                                val isSelected = notifyAdvanceMinutes == minutes
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = { notifyAdvanceMinutes = minutes },
-                                    label = { Text(label) },
-                                    shape = RoundedCornerShape(14.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+                            val buttonShape = RoundedCornerShape(14.dp)
+                            availableAlerts.forEach { minutes ->
+                                val isSelected = selectedAlertMinutes.contains(minutes)
+                                val isPreset = defaultPresetAlerts.contains(minutes)
 
-            // Accent Color Swatches
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Accent Color",
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TimerColorPalette.forEachIndexed { index, color ->
-                        val isSelected = selectedColorIndex == index
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(color)
-                                .border(
-                                    width = if (isSelected) 3.dp else 1.dp,
-                                    color = if (isSelected) Color.White else Color.Transparent,
-                                    shape = CircleShape
+                                Surface(
+                                    modifier = Modifier
+                                        .height(48.dp)
+                                        .clip(buttonShape)
+                                        .clickable {
+                                            selectedAlertMinutes = if (isSelected) {
+                                                selectedAlertMinutes - minutes
+                                            } else {
+                                                selectedAlertMinutes + minutes
+                                            }
+                                        }
+                                        .testTag("chip_alert_notice_$minutes"),
+                                    shape = buttonShape,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    border = BorderStroke(
+                                        width = if (isSelected) 1.5.dp else 1.dp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 14.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        if (isSelected) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Selected",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Default.NotificationsNone,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+
+                                        Text(
+                                            text = CountdownEntity.formatAlertOffsetLabel(minutes),
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+
+                                        if (!isPreset) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(CircleShape)
+                                                    .clickable {
+                                                        availableAlerts = availableAlerts - minutes
+                                                        selectedAlertMinutes = selectedAlertMinutes - minutes
+                                                    }
+                                                    .padding(3.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "Remove Custom Alert",
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(15.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Button to create custom alert notification with matching button size
+                            Surface(
+                                modifier = Modifier
+                                    .height(48.dp)
+                                    .clip(buttonShape)
+                                    .clickable { showCustomAlertDialog = true }
+                                    .testTag("button_add_custom_alert"),
+                                shape = buttonShape,
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                border = BorderStroke(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                                 )
-                                .clickable { selectedColorIndex = index },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Selected",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Add Custom Alert",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = "Custom Alert...",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
                     }
@@ -569,17 +712,18 @@ fun AddEditCountdownScreen(
                         ZoneId.of(selectedZoneId)
                     )
 
+                    val alertsListStr = selectedAlertMinutes.sorted().joinToString(",")
                     viewModel.saveTimer(
                         existingId = timerId,
                         title = title,
                         targetEpochMillis = targetZdt.toInstant().toEpochMilli(),
                         timeZoneId = selectedZoneId,
                         category = selectedCategory,
-                        colorIndex = selectedColorIndex,
+                        colorIndex = 0,
                         iconName = selectedCategory,
-                        notifyOnFinish = notifyOnFinish,
-                        notifyAdvanceMinutes = notifyAdvanceMinutes,
-                        isPinnedToWidget = isPinnedToWidget,
+                        notifyOnFinish = notifyOnFinish && selectedAlertMinutes.isNotEmpty(),
+                        notifyAdvanceMinutes = selectedAlertMinutes.minOrNull() ?: 0,
+                        alertMinutesList = alertsListStr,
                         notes = notes
                     )
 
@@ -609,15 +753,71 @@ fun AddEditCountdownScreen(
         )
     }
 
-    if (showAddCategoryDialog) {
-        val existingNames = CountdownCategories.DEFAULT_LIST.map { it.name } + customCategories.map { it.name }
-        AddCategoryDialog(
-            onDismissRequest = { showAddCategoryDialog = false },
-            onCategoryCreated = { name, iconName, colorHex ->
-                viewModel.addCategory(name, iconName, colorHex)
-                selectedCategory = name
+    if (showManageCategoriesSheet) {
+        ManageCategoriesSheet(
+            categories = customCategories,
+            categoryCounts = categoryCounts,
+            onDismiss = { showManageCategoriesSheet = false },
+            onEditCategory = { cat ->
+                showManageCategoriesSheet = false
+                categoryToEdit = cat
+                showAddCategoryDialog = true
             },
+            onAddNewCategory = {
+                showManageCategoriesSheet = false
+                categoryToEdit = null
+                showAddCategoryDialog = true
+            }
+        )
+    }
+
+    if (showAddCategoryDialog) {
+        val existingNames = customCategories.map { it.name }
+        CategoryEditDialog(
+            categoryToEdit = categoryToEdit,
+            onDismissRequest = {
+                showAddCategoryDialog = false
+                categoryToEdit = null
+            },
+            onSaveCategory = { name, iconName, colorHex ->
+                val targetCat = categoryToEdit
+                if (targetCat != null) {
+                    viewModel.updateCategory(
+                        oldName = targetCat.name,
+                        category = targetCat.copy(
+                            name = name,
+                            iconName = iconName,
+                            colorHex = colorHex
+                        )
+                    )
+                    if (selectedCategory.equals(targetCat.name, ignoreCase = true)) {
+                        selectedCategory = name
+                    }
+                } else {
+                    viewModel.addCategory(name, iconName, colorHex)
+                    selectedCategory = name
+                }
+            },
+            onDeleteCategory = if (categoryToEdit != null) {
+                {
+                    val toDelete = categoryToEdit!!
+                    viewModel.deleteCategory(toDelete)
+                    if (selectedCategory.equals(toDelete.name, ignoreCase = true)) {
+                        selectedCategory = customCategories.firstOrNull { it.id != toDelete.id }?.name ?: "Personal"
+                    }
+                }
+            } else null,
             existingCategoryNames = existingNames
+        )
+    }
+
+    if (showCustomAlertDialog) {
+        CreateCustomAlertDialog(
+            onDismissRequest = { showCustomAlertDialog = false },
+            onAlertCreated = { newMinutes ->
+                availableAlerts = (availableAlerts + newMinutes).distinct().sorted()
+                selectedAlertMinutes = selectedAlertMinutes + newMinutes
+            }
         )
     }
 }

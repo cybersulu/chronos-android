@@ -4,6 +4,7 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -40,10 +41,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.HourglassBottom
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.Pin
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -79,12 +78,14 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.example.data.CategoryEntity
 import com.example.data.CountdownEntity
 import com.example.model.CountdownBreakdown
 import com.example.model.CountdownCategories
-import com.example.ui.components.AddCategoryDialog
+import com.example.ui.components.CategoryEditDialog
 import com.example.ui.components.CategoryFilterBar
 import com.example.ui.components.FullCountdownGrid
+import com.example.ui.components.ManageCategoriesSheet
 import com.example.ui.theme.TimerColorPalette
 import com.example.ui.viewmodel.CountdownViewModel
 import kotlin.math.roundToInt
@@ -100,6 +101,7 @@ fun CountdownListScreen(
     val filteredTimers by viewModel.filteredTimers.collectAsState()
     val allTimers by viewModel.allTimers.collectAsState()
     val categoryCounts by viewModel.categoryCounts.collectAsState()
+    val customCategories by viewModel.customCategories.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     // Observe ticker so all items recompose smoothly every second
     val tickerTime by viewModel.currentTickerTime.collectAsState()
@@ -110,6 +112,8 @@ fun CountdownListScreen(
     var draggedItemIndex by remember { mutableIntStateOf(-1) }
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
     var showAddCategoryDialog by remember { mutableStateOf(false) }
+    var showManageCategoriesSheet by remember { mutableStateOf(false) }
+    var categoryToEdit by remember { mutableStateOf<CategoryEntity?>(null) }
 
     fun triggerDragHaptic() {
         try {
@@ -207,21 +211,75 @@ fun CountdownListScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Category Filter Pills with distinct counters
+            // Category Filter Pills with distinct counters and edit/manage triggers
             CategoryFilterBar(
                 categoryCounts = categoryCounts,
                 selectedCategory = selectedCategory,
                 onCategorySelected = { viewModel.selectCategory(it) },
-                onAddCategoryClick = { showAddCategoryDialog = true }
+                onAddCategoryClick = {
+                    categoryToEdit = null
+                    showAddCategoryDialog = true
+                },
+                onManageCategoriesClick = {
+                    showManageCategoriesSheet = true
+                },
+                onEditSelectedCategory = { catName ->
+                    val found = customCategories.find { it.name.equals(catName, ignoreCase = true) }
+                    categoryToEdit = found ?: CategoryEntity(
+                        name = catName,
+                        iconName = catName,
+                        colorHex = CountdownCategories.getColorHexForCategory(catName)
+                    )
+                    showAddCategoryDialog = true
+                }
             )
 
-            if (showAddCategoryDialog) {
-                AddCategoryDialog(
-                    onDismissRequest = { showAddCategoryDialog = false },
-                    onCategoryCreated = { name, iconName, colorHex ->
-                        viewModel.addCategory(name, iconName, colorHex)
-                        viewModel.selectCategory(name)
+            if (showManageCategoriesSheet) {
+                ManageCategoriesSheet(
+                    categories = customCategories,
+                    categoryCounts = categoryCounts,
+                    onDismiss = { showManageCategoriesSheet = false },
+                    onEditCategory = { cat ->
+                        showManageCategoriesSheet = false
+                        categoryToEdit = cat
+                        showAddCategoryDialog = true
                     },
+                    onAddNewCategory = {
+                        showManageCategoriesSheet = false
+                        categoryToEdit = null
+                        showAddCategoryDialog = true
+                    }
+                )
+            }
+
+            if (showAddCategoryDialog) {
+                CategoryEditDialog(
+                    categoryToEdit = categoryToEdit,
+                    onDismissRequest = {
+                        showAddCategoryDialog = false
+                        categoryToEdit = null
+                    },
+                    onSaveCategory = { name, iconName, colorHex ->
+                        val targetCat = categoryToEdit
+                        if (targetCat != null) {
+                            viewModel.updateCategory(
+                                oldName = targetCat.name,
+                                category = targetCat.copy(
+                                    name = name,
+                                    iconName = iconName,
+                                    colorHex = colorHex
+                                )
+                            )
+                        } else {
+                            viewModel.addCategory(name, iconName, colorHex)
+                            viewModel.selectCategory(name)
+                        }
+                    },
+                    onDeleteCategory = if (categoryToEdit != null) {
+                        {
+                            viewModel.deleteCategory(categoryToEdit!!)
+                        }
+                    } else null,
                     existingCategoryNames = categoryCounts.map { it.name }
                 )
             }
@@ -244,24 +302,22 @@ fun CountdownListScreen(
                     ) { index, timer ->
                         val isBeingDragged = draggedItemIndex == index
 
-                        val itemColor = TimerColorPalette.getOrElse(timer.colorIndex) {
-                            TimerColorPalette[0]
-                        }
+                        // Use the default Accent Color set for the timer's category
+                        val itemColor = Color(CountdownCategories.getColorHexForCategory(timer.category))
+                        val is24Hour = remember(context) { DateFormat.is24HourFormat(context) }
 
                         // Recompute with current ticker
-                        val breakdown = remember(timer.targetEpochMillis, timer.timeZoneId, tickerTime) {
-                            CountdownBreakdown.compute(timer.targetEpochMillis, timer.timeZoneId)
+                        val breakdown = remember(timer.targetEpochMillis, timer.timeZoneId, tickerTime, is24Hour) {
+                            CountdownBreakdown.compute(timer.targetEpochMillis, timer.timeZoneId, is24Hour)
                         }
 
                         CountdownCard(
                             timer = timer,
                             breakdown = breakdown,
                             accentColor = itemColor,
-                            isPinnedToWidget = timer.isPinnedToWidget,
                             isBeingDragged = isBeingDragged,
                             dragOffsetY = if (isBeingDragged) dragOffsetY else 0f,
                             onCardClick = { onNavigateToDetail(timer.id) },
-                            onPinToWidget = { viewModel.pinTimerToWidget(timer.id) },
                             onEdit = { onNavigateToEdit(timer.id) },
                             onDelete = { viewModel.deleteTimer(timer) },
                             onMoveUp = { viewModel.moveTimerUp(timer) },
@@ -319,11 +375,9 @@ fun CountdownCard(
     timer: CountdownEntity,
     breakdown: CountdownBreakdown,
     accentColor: Color,
-    isPinnedToWidget: Boolean,
     isBeingDragged: Boolean,
     dragOffsetY: Float,
     onCardClick: () -> Unit,
-    onPinToWidget: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onMoveUp: () -> Unit,
@@ -356,10 +410,10 @@ fun CountdownCard(
                 )
             )
             .border(
-                width = if (isPinnedToWidget) 2.dp else 1.dp,
+                width = 1.dp,
                 brush = Brush.linearGradient(
                     listOf(
-                        if (isPinnedToWidget) accentColor else accentColor.copy(alpha = 0.4f),
+                        accentColor.copy(alpha = 0.4f),
                         accentColor.copy(alpha = 0.1f)
                     )
                 ),
@@ -370,7 +424,7 @@ fun CountdownCard(
             .testTag("countdown_card_${timer.id}")
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Top Row: Category tag, Pinned to widget badge, Drag handle & Menu
+            // Top Row: Category tag, Drag handle & Menu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -402,42 +456,6 @@ fun CountdownCard(
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                 color = accentColor
                             )
-                        }
-                    }
-
-                    // Pinned to Widget Tag
-                    if (isPinnedToWidget) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f))
-                                .border(
-                                    width = 1.dp,
-                                    color = MaterialTheme.colorScheme.tertiary,
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Widgets,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = "HOME WIDGET",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Black,
-                                        letterSpacing = 0.5.sp
-                                    ),
-                                    color = MaterialTheme.colorScheme.tertiary
-                                )
-                            }
                         }
                     }
                 }
@@ -479,18 +497,6 @@ fun CountdownCard(
                             expanded = menuExpanded,
                             onDismissRequest = { menuExpanded = false }
                         ) {
-                            if (!isPinnedToWidget) {
-                                DropdownMenuItem(
-                                    text = { Text("Set as Home Widget") },
-                                    leadingIcon = {
-                                        Icon(imageVector = Icons.Default.Widgets, contentDescription = null)
-                                    },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onPinToWidget()
-                                    }
-                                )
-                            }
                             if (canMoveUp) {
                                 DropdownMenuItem(
                                     text = { Text("Move Up") },

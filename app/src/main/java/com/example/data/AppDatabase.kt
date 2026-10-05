@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
-@Database(entities = [CountdownEntity::class, CategoryEntity::class], version = 2, exportSchema = false)
+@Database(entities = [CountdownEntity::class, CategoryEntity::class], version = 4, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun countdownDao(): CountdownDao
@@ -76,7 +76,6 @@ abstract class AppDatabase : RoomDatabase() {
                         orderIndex = 0,
                         notifyOnFinish = true,
                         notifyAdvanceMinutes = 60,
-                        isPinnedToWidget = true,
                         notes = "Gather friends, pop champagne, and watch fireworks!"
                     ),
                     CountdownEntity(
@@ -89,7 +88,6 @@ abstract class AppDatabase : RoomDatabase() {
                         orderIndex = 1,
                         notifyOnFinish = true,
                         notifyAdvanceMinutes = 1440,
-                        isPinnedToWidget = false,
                         notes = "Flight NH106 departing Haneda. Check-in luggage packed!"
                     ),
                     CountdownEntity(
@@ -102,7 +100,6 @@ abstract class AppDatabase : RoomDatabase() {
                         orderIndex = 2,
                         notifyOnFinish = true,
                         notifyAdvanceMinutes = 15,
-                        isPinnedToWidget = false,
                         notes = "Presenting version 3.0 to stakeholders worldwide."
                     ),
                     CountdownEntity(
@@ -115,7 +112,6 @@ abstract class AppDatabase : RoomDatabase() {
                         orderIndex = 3,
                         notifyOnFinish = true,
                         notifyAdvanceMinutes = 0,
-                        isPinnedToWidget = false,
                         notes = "Rare astronomical celestial alignment observed globally."
                     )
                 )

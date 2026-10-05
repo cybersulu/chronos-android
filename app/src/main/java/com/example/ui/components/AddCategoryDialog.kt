@@ -22,10 +22,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -44,39 +47,91 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.CategoryEntity
 import com.example.model.CountdownCategories
 
 @Composable
-fun AddCategoryDialog(
+fun CategoryEditDialog(
+    categoryToEdit: CategoryEntity? = null,
     onDismissRequest: () -> Unit,
-    onCategoryCreated: (name: String, iconName: String, colorHex: Long) -> Unit,
+    onSaveCategory: (name: String, iconName: String, colorHex: Long) -> Unit,
+    onDeleteCategory: (() -> Unit)? = null,
     existingCategoryNames: List<String> = emptyList()
 ) {
-    var categoryName by remember { mutableStateOf("") }
-    var selectedIconName by remember { mutableStateOf("Event") }
-    var selectedColorHex by remember { mutableStateOf(0xFF8B5CF6L) }
+    val isEditing = categoryToEdit != null
+    var categoryName by remember { mutableStateOf(categoryToEdit?.name ?: "") }
+    var selectedIconName by remember { mutableStateOf(categoryToEdit?.iconName ?: "Event") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
+    // Each category uses the default accent color set for the category
+    val defaultColorHex = CountdownCategories.getColorHexForCategory(
+        categoryName.ifBlank { categoryToEdit?.name ?: "Celebration" }
+    )
+    val currentColor = Color(defaultColorHex)
     val selectedIcon = CountdownCategories.getIconByName(selectedIconName)
-    val currentColor = Color(selectedColorHex)
+
+    if (showDeleteConfirm && onDeleteCategory != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete Category?") },
+            text = { Text("Are you sure you want to delete '${categoryToEdit?.name}'? Events in this category will keep their name.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirm = false
+                        onDeleteCategory()
+                        onDismissRequest()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        modifier = Modifier.testTag("dialog_add_category"),
+        modifier = Modifier.testTag("dialog_category_editor"),
         title = {
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Icon(
-                    imageVector = Icons.Default.Category,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "New Category",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isEditing) Icons.Default.Edit else Icons.Default.Category,
+                        contentDescription = null,
+                        tint = currentColor
+                    )
+                    Text(
+                        text = if (isEditing) "Edit Category" else "New Category",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+
+                if (isEditing && onDeleteCategory != null) {
+                    IconButton(
+                        onClick = { showDeleteConfirm = true },
+                        modifier = Modifier.testTag("button_delete_category")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete Category",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
             }
         },
         text = {
@@ -94,7 +149,7 @@ fun AddCategoryDialog(
                         errorMessage = null
                     },
                     label = { Text("Category Name") },
-                    placeholder = { Text("e.g. Fitness, Wedding, Exams") },
+                    placeholder = { Text("e.g. Fitness, Travel, Celebration") },
                     singleLine = true,
                     isError = errorMessage != null,
                     supportingText = {
@@ -112,10 +167,10 @@ fun AddCategoryDialog(
                         .testTag("input_category_name")
                 )
 
-                // Live Preview Pill
+                // Live Preview Pill with default accent color for the category
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "Preview",
+                        text = "Category Preview",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -148,47 +203,6 @@ fun AddCategoryDialog(
                     }
                 }
 
-                // Color Selection Row
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = "Accent Color",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CountdownCategories.PRESET_COLORS.forEach { colorHex ->
-                            val isColorSelected = selectedColorHex == colorHex
-                            val color = Color(colorHex)
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(color)
-                                    .clickable { selectedColorHex = colorHex }
-                                    .border(
-                                        width = if (isColorSelected) 2.5.dp else 1.dp,
-                                        color = if (isColorSelected) Color.White else Color.Transparent,
-                                        shape = CircleShape
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (isColorSelected) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Selected",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
                 // Icon Selection Grid
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
@@ -200,7 +214,7 @@ fun AddCategoryDialog(
                         columns = GridCells.Fixed(5),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp)
+                            .height(170.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                             .padding(8.dp),
@@ -243,10 +257,13 @@ fun AddCategoryDialog(
                     val trimmed = categoryName.trim()
                     if (trimmed.isBlank()) {
                         errorMessage = "Please enter a category name"
-                    } else if (existingCategoryNames.any { it.equals(trimmed, ignoreCase = true) }) {
+                    } else if (
+                        !trimmed.equals(categoryToEdit?.name, ignoreCase = true) &&
+                        existingCategoryNames.any { it.equals(trimmed, ignoreCase = true) }
+                    ) {
                         errorMessage = "Category already exists"
                     } else {
-                        onCategoryCreated(trimmed, selectedIconName, selectedColorHex)
+                        onSaveCategory(trimmed, selectedIconName, defaultColorHex)
                         onDismissRequest()
                     }
                 },
@@ -254,20 +271,39 @@ fun AddCategoryDialog(
                     containerColor = currentColor
                 ),
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.testTag("button_confirm_add_category")
+                modifier = Modifier.testTag("button_confirm_category_save")
             ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(
+                    imageVector = if (isEditing) Icons.Default.Check else Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Save Category", fontWeight = FontWeight.Bold)
+                Text(if (isEditing) "Save Changes" else "Save Category", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(
                 onClick = onDismissRequest,
-                modifier = Modifier.testTag("button_cancel_add_category")
+                modifier = Modifier.testTag("button_cancel_category_editor")
             ) {
                 Text("Cancel")
             }
         }
+    )
+}
+
+// Backwards-compatible alias for AddCategoryDialog
+@Composable
+fun AddCategoryDialog(
+    onDismissRequest: () -> Unit,
+    onCategoryCreated: (name: String, iconName: String, colorHex: Long) -> Unit,
+    existingCategoryNames: List<String> = emptyList()
+) {
+    CategoryEditDialog(
+        categoryToEdit = null,
+        onDismissRequest = onDismissRequest,
+        onSaveCategory = onCategoryCreated,
+        existingCategoryNames = existingCategoryNames
     )
 }

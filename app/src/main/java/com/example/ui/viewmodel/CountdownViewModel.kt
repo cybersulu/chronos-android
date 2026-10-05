@@ -59,31 +59,34 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
 
-        // Register custom categories with CountdownCategories lookup cache
+        // Seed default categories into the database so all categories are editable by the user
+        viewModelScope.launch {
+            repository.ensureDefaultCategoriesPopulated()
+        }
+
+        // Register categories with CountdownCategories lookup cache
         viewModelScope.launch {
             customCategories.collect { categories ->
-                for (cat in categories) {
-                    CountdownCategories.registerCustomCategory(cat.name, cat.iconName, cat.colorHex)
-                }
+                CountdownCategories.updateFromEntities(categories)
             }
         }
     }
 
-    // Category Counts calculation combining Default categories + Custom categories + Timers
-    val categoryCounts: StateFlow<List<CategoryCountItem>> = combine(allTimers, customCategories) { timers, customCats ->
-        // Register each custom category in CountdownCategories
-        for (cat in customCats) {
-            CountdownCategories.registerCustomCategory(cat.name, cat.iconName, cat.colorHex)
-        }
+    // Category Counts calculation combining database categories + timers
+    val categoryCounts: StateFlow<List<CategoryCountItem>> = combine(allTimers, customCategories) { timers, categories ->
+        CountdownCategories.updateFromEntities(categories)
 
         val list = mutableListOf<CategoryCountItem>()
         list.add(CategoryCountItem(CountdownCategories.ALL, timers.size))
 
-        val baseCategories = CountdownCategories.DEFAULT_LIST.map { it.name }
-        val customNames = customCats.map { it.name }
+        val baseNames = if (categories.isNotEmpty()) {
+            categories.map { it.name }
+        } else {
+            CountdownCategories.DEFAULT_LIST.map { it.name }
+        }
         val timerCategories = timers.map { it.category }
 
-        val allCategories = (baseCategories + customNames + timerCategories).distinct()
+        val allCategories = (baseNames + timerCategories).distinct()
         for (cat in allCategories) {
             val count = timers.count { it.category.equals(cat, ignoreCase = true) }
             list.add(CategoryCountItem(cat, count))
@@ -122,12 +125,28 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
                     colorHex = colorHex
                 )
             )
+            CountdownAppWidgetProvider.triggerUpdate(getApplication())
+        }
+    }
+
+    fun updateCategory(oldName: String, category: CategoryEntity) {
+        viewModelScope.launch {
+            CountdownCategories.registerCustomCategory(category.name, category.iconName, category.colorHex)
+            repository.updateCategory(oldName, category)
+            if (_selectedCategory.value.equals(oldName, ignoreCase = true)) {
+                _selectedCategory.value = category.name
+            }
+            CountdownAppWidgetProvider.triggerUpdate(getApplication())
         }
     }
 
     fun deleteCategory(category: CategoryEntity) {
         viewModelScope.launch {
             repository.deleteCategory(category)
+            if (_selectedCategory.value.equals(category.name, ignoreCase = true)) {
+                _selectedCategory.value = CountdownCategories.ALL
+            }
+            CountdownAppWidgetProvider.triggerUpdate(getApplication())
         }
     }
 
@@ -137,12 +156,12 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
         targetEpochMillis: Long,
         timeZoneId: String,
         category: String,
-        colorIndex: Int,
-        iconName: String,
-        notifyOnFinish: Boolean,
-        notifyAdvanceMinutes: Int,
-        isPinnedToWidget: Boolean,
-        notes: String
+        colorIndex: Int = 0,
+        iconName: String = "",
+        notifyOnFinish: Boolean = true,
+        notifyAdvanceMinutes: Int = 0,
+        alertMinutesList: String = "",
+        notes: String = ""
     ) {
         viewModelScope.launch {
             val context = getApplication<Application>()
@@ -153,10 +172,10 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
                 timeZoneId = timeZoneId,
                 category = category,
                 colorIndex = colorIndex,
-                iconName = iconName,
+                iconName = iconName.ifBlank { category },
                 notifyOnFinish = notifyOnFinish,
                 notifyAdvanceMinutes = notifyAdvanceMinutes,
-                isPinnedToWidget = isPinnedToWidget,
+                alertMinutesList = alertMinutesList,
                 notes = notes
             )
 
@@ -165,11 +184,6 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
             } else {
                 repository.update(timer)
                 existingId
-            }
-
-            // Pin to widget if user toggled it
-            if (isPinnedToWidget) {
-                repository.pinToWidget(savedId)
             }
 
             // Reschedule notification alarm for this timer
@@ -181,13 +195,6 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
 
             // Immediately notify all AppWidgets (4x1, 3x1, 5x1)
             CountdownAppWidgetProvider.triggerUpdate(context)
-        }
-    }
-
-    fun pinTimerToWidget(timerId: Long) {
-        viewModelScope.launch {
-            repository.pinToWidget(timerId)
-            CountdownAppWidgetProvider.triggerUpdate(getApplication())
         }
     }
 

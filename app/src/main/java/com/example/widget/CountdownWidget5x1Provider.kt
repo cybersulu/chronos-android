@@ -13,6 +13,7 @@ import com.example.MainActivity
 import com.example.R
 import com.example.data.AppDatabase
 import com.example.model.CountdownBreakdown
+import com.example.model.CountdownCategories
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -77,7 +78,7 @@ class CountdownWidget5x1Provider : AppWidgetProvider() {
                     val timer = if (selectedTimerId != null) {
                         db.countdownDao().getTimerByIdSync(selectedTimerId)
                     } else {
-                        db.countdownDao().getPinnedWidgetTimer() ?: db.countdownDao().getFirstTimer()
+                        db.countdownDao().getFirstTimer()
                     }
 
                     val views = RemoteViews(context.packageName, R.layout.widget_countdown_5x1)
@@ -116,8 +117,9 @@ class CountdownWidget5x1Provider : AppWidgetProvider() {
                     )
 
                     if (timer != null) {
-                        val accentColorInt = getAccentColorInt(timer.colorIndex)
-                        val breakdown = CountdownBreakdown.compute(timer.targetEpochMillis, timer.timeZoneId)
+                        val accentColorInt = CountdownCategories.getColorHexForCategory(timer.category).toInt()
+                        val is24Hour = android.text.format.DateFormat.is24HourFormat(context)
+                        val breakdown = CountdownBreakdown.compute(timer.targetEpochMillis, timer.timeZoneId, is24Hour)
 
                         views.setTextViewText(R.id.widget_5x1_event_title, timer.title)
                         views.setTextViewText(

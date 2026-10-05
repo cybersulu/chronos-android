@@ -4,6 +4,7 @@ import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.os.Bundle
+import android.text.format.DateFormat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -53,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.AppDatabase
 import com.example.data.CountdownEntity
 import com.example.model.CountdownBreakdown
+import com.example.model.CountdownCategories
 import com.example.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -264,21 +267,14 @@ fun WidgetTimerCard(
     timer: CountdownEntity,
     onSelect: () -> Unit
 ) {
-    val breakdown = remember(timer.targetEpochMillis, timer.timeZoneId) {
-        CountdownBreakdown.compute(timer.targetEpochMillis, timer.timeZoneId)
+    val context = LocalContext.current
+    val is24Hour = remember(context) { DateFormat.is24HourFormat(context) }
+    val breakdown = remember(timer.targetEpochMillis, timer.timeZoneId, is24Hour) {
+        CountdownBreakdown.compute(timer.targetEpochMillis, timer.timeZoneId, is24Hour)
     }
 
-    val accentColor = remember(timer.colorIndex) {
-        when (timer.colorIndex) {
-            0 -> Color(0xFFF59E0B)
-            1 -> Color(0xFF06B6D4)
-            2 -> Color(0xFF6366F1)
-            3 -> Color(0xFF8B5CF6)
-            4 -> Color(0xFF10B981)
-            5 -> Color(0xFFF43F5E)
-            6 -> Color(0xFF3B82F6)
-            else -> Color(0xFFF59E0B)
-        }
+    val accentColor = remember(timer.category) {
+        Color(CountdownCategories.getColorHexForCategory(timer.category))
     }
 
     Card(
