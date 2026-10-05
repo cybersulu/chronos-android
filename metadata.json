@@ -1,0 +1,6 @@
+{
+  "name": "Chronos",
+  "description": "Material 3 Expressive countdown timer tracking years, months, days, hours, minutes, and seconds, with customizable notifications, categories, drag-and-drop reordering, home screen widget, and multi-timezone support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

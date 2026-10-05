@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Subtle Soft Material Elevation Shadow -->
+    <path
+        android:pathData="M38,78 C38,76 70,76 70,78 C70,82 38,82 38,78 Z"
+        android:fillColor="#15000000" />
+    <path
+        android:pathData="M34,79 C34,77.5 74,77.5 74,79 C74,83 34,83 34,79 Z"
+        android:fillColor="#0A000000" />
+
+    <!-- Translucent Glass Chambers Tint -->
+    <path
+        android:pathData="M40,34 C40,46 49.5,52 52,54 C49.5,56 40,62 40,74 L68,74 C68,62 58.5,56 56,54 C58.5,52 68,46 68,34 Z"
+        android:fillColor="#0C1A73E8" />
+
+    <!-- Warm Natural Beige: Upper Chamber Active Sand -->
+    <path
+        android:pathData="M42.5,37 C43.5,45.5 49.5,50.5 54,52 C58.5,50.5 64.5,45.5 65.5,37 Z"
+        android:fillColor="#E0CCA7" />
+
+    <!-- Soft Cream Beige Surface Highlight -->
+    <path
+        android:pathData="M42.5,37 Q54,39 65.5,37"
+        android:strokeWidth="1.8"
+        android:strokeColor="#F5EBE1"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+    <!-- Warm Beige: Flowing Stream & Kinetic Droplet -->
+    <path
+        android:pathData="M54,51.5 L54,59"
+        android:strokeWidth="3.2"
+        android:strokeColor="#D4BE96"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+    <!-- Floating Warm Beige Time Bead -->
+    <path
+        android:pathData="M54,62m-1.8,0a1.8,1.8 0 1,1 3.6,0a1.8,1.8 0 1,1 -3.6,0"
+        android:fillColor="#D4BE96" />
+
+    <!-- Warm Natural Beige: Lower Chamber Accumulated Sand Mound -->
+    <path
+        android:pathData="M42,74 C43.5,67.5 49,64 54,64 C59,64 64.5,67.5 66,74 Z"
+        android:fillColor="#E0CCA7" />
+
+    <!-- Soft Cream Beige Mound Crest Accent -->
+    <path
+        android:pathData="M48,65.5 Q54,64 60,65.5"
+        android:strokeWidth="1.8"
+        android:strokeColor="#F5EBE1"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+    <!-- Glass Specular Highlight (Crisp Google minimal glint) -->
+    <path
+        android:pathData="M43,37 C43,43 47,48 50,50"
+        android:strokeWidth="2.2"
+        android:strokeColor="#70FFFFFF"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+    <!-- Google Blue (#1A73E8): Hourglass Frame Silhouette -->
+    <!-- Curved Glass Perimeter Stroke -->
+    <path
+        android:pathData="M40,34 C40,46 49.5,52 52,54 C49.5,56 40,62 40,74"
+        android:strokeWidth="3.5"
+        android:strokeColor="#1A73E8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+
+    <path
+        android:pathData="M68,34 C68,46 58.5,52 56,54 C58.5,56 68,62 68,74"
+        android:strokeWidth="3.5"
+        android:strokeColor="#1A73E8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+
+    <!-- Google Blue (#1A73E8): Sculpted Modern Top Cap -->
+    <path
+        android:pathData="M35,28.5 L73,28.5 A3,3 0 0,1 76,31.5 L76,31.5 A3,3 0 0,1 73,34.5 L35,34.5 A3,3 0 0,1 32,31.5 L32,31.5 A3,3 0 0,1 35,28.5 Z"
+        android:fillColor="#1A73E8" />
+
+    <!-- Google Blue (#1A73E8): Sculpted Modern Bottom Cap -->
+    <path
+        android:pathData="M35,73.5 L73,73.5 A3,3 0 0,1 76,76.5 L76,76.5 A3,3 0 0,1 73,79.5 L35,79.5 A3,3 0 0,1 32,76.5 L32,76.5 A3,3 0 0,1 35,73.5 Z"
+        android:fillColor="#1A73E8" />
+
+    <!-- Top Cap Bevel Highlight -->
+    <path
+        android:pathData="M36,30.2 L72,30.2"
+        android:strokeWidth="1.2"
+        android:strokeColor="#40FFFFFF"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+</vector>
