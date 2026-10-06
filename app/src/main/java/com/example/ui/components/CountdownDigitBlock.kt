@@ -186,3 +186,113 @@ fun FullCountdownGrid(
         }
     }
 }
+
+/**
+ * Displays years, months, days, hours, mins, and secs all on the same single line for event cards.
+ */
+@Composable
+fun SingleLineCountdownRow(
+    breakdown: CountdownBreakdown,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val units = listOf(
+        Pair(breakdown.years, "Years"),
+        Pair(breakdown.months, "Months"),
+        Pair(breakdown.days, "Days"),
+        Pair(breakdown.hours, "Hours"),
+        Pair(breakdown.minutes, "Mins"),
+        Pair(breakdown.seconds, "Secs")
+    )
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        units.forEach { (value, label) ->
+            SingleLineDigitBlock(
+                value = value,
+                label = label,
+                accentColor = accentColor,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+fun SingleLineDigitBlock(
+    value: Long,
+    label: String,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(10.dp)
+    val formattedValue = if (value < 10 && value >= 0) "0$value" else value.toString()
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            accentColor.copy(alpha = 0.18f),
+                            accentColor.copy(alpha = 0.06f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            accentColor.copy(alpha = 0.45f),
+                            accentColor.copy(alpha = 0.15f)
+                        )
+                    ),
+                    shape = shape
+                )
+                .padding(vertical = 7.dp, horizontal = 2.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            AnimatedContent(
+                targetState = formattedValue,
+                transitionSpec = {
+                    slideInVertically { height -> height } togetherWith
+                            slideOutVertically { height -> -height }
+                },
+                label = "single_line_digit_anim"
+            ) { targetText ->
+                Text(
+                    text = targetText,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace
+                    ),
+                    color = accentColor,
+                    maxLines = 1,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+
+        Text(
+            text = label.uppercase(),
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontSize = 8.5.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.2.sp
+            ),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            modifier = Modifier.padding(top = 4.dp),
+            textAlign = TextAlign.Center
+        )
+    }
+}

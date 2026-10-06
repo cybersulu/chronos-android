@@ -51,7 +51,7 @@ fun CategoryFilterBar(
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
             .testTag("category_filter_bar"),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -70,39 +70,39 @@ fun CategoryFilterBar(
                 CountdownCategories.getIconForCategory(item.name)
             }
 
-            val pillShape = RoundedCornerShape(16.dp)
+            val pillShape = RoundedCornerShape(18.dp)
 
             Row(
                 modifier = Modifier
-                    .height(48.dp)
+                    .height(54.dp)
                     .clip(pillShape)
                     .background(
                         if (isSelected) categoryColor.copy(alpha = 0.22f)
                         else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                     )
                     .border(
-                        width = if (isSelected) 1.5.dp else 1.dp,
-                        color = if (isSelected) categoryColor else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        width = if (isSelected) 2.dp else 1.dp,
+                        color = if (isSelected) categoryColor else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
                         shape = pillShape
                     )
                     .clickable { onCategorySelected(item.name) }
-                    .padding(horizontal = 14.dp)
+                    .padding(horizontal = 16.dp)
                     .testTag("category_chip_${item.name.lowercase()}"),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(22.dp),
                     tint = if (isSelected) categoryColor else MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Text(
                     text = item.name,
-                    style = MaterialTheme.typography.bodyMedium.copy(
+                    style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                        fontSize = 15.sp
+                        fontSize = 16.sp
                     ),
                     color = if (isSelected) categoryColor else MaterialTheme.colorScheme.onSurface
                 )
@@ -115,13 +115,13 @@ fun CategoryFilterBar(
                             if (isSelected) categoryColor
                             else MaterialTheme.colorScheme.surfaceVariant
                         )
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = item.count.toString(),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         ),
                         color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
@@ -142,7 +142,7 @@ fun CategoryFilterBar(
                             imageVector = Icons.Default.Edit,
                             contentDescription = "Edit Category",
                             tint = categoryColor,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -151,34 +151,34 @@ fun CategoryFilterBar(
 
         if (onManageCategoriesClick != null) {
             item(key = "manage_categories_button") {
-                val pillShape = RoundedCornerShape(16.dp)
+                val pillShape = RoundedCornerShape(18.dp)
                 Row(
                     modifier = Modifier
-                        .height(48.dp)
+                        .height(54.dp)
                         .clip(pillShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                         .border(
                             width = 1.dp,
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
                             shape = pillShape
                         )
                         .clickable { onManageCategoriesClick() }
-                        .padding(horizontal = 14.dp)
+                        .padding(horizontal = 16.dp)
                         .testTag("category_chip_manage"),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Tune,
                         contentDescription = "Manage",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                     Text(
                         text = "Manage",
-                        style = MaterialTheme.typography.bodyMedium.copy(
+                        style = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp
+                            fontSize = 16.sp
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -188,34 +188,34 @@ fun CategoryFilterBar(
 
         if (onAddCategoryClick != null) {
             item(key = "add_category_button") {
-                val pillShape = RoundedCornerShape(16.dp)
+                val pillShape = RoundedCornerShape(18.dp)
                 Row(
                     modifier = Modifier
-                        .height(48.dp)
+                        .height(54.dp)
                         .clip(pillShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                         .border(
-                            width = 1.dp,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                            width = 1.5.dp,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
                             shape = pillShape
                         )
                         .clickable { onAddCategoryClick() }
-                        .padding(horizontal = 14.dp)
+                        .padding(horizontal = 16.dp)
                         .testTag("category_chip_add_new"),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Add Category",
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                     Text(
                         text = "New Category",
-                        style = MaterialTheme.typography.bodyMedium.copy(
+                        style = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp
+                            fontSize = 16.sp
                         ),
                         color = MaterialTheme.colorScheme.primary
                     )

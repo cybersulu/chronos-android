@@ -85,6 +85,7 @@ import com.example.model.CountdownCategories
 import com.example.ui.components.CategoryEditDialog
 import com.example.ui.components.CategoryFilterBar
 import com.example.ui.components.FullCountdownGrid
+import com.example.ui.components.SingleLineCountdownRow
 import com.example.ui.components.ManageCategoriesSheet
 import com.example.ui.theme.TimerColorPalette
 import com.example.ui.viewmodel.CountdownViewModel
@@ -589,11 +590,10 @@ fun CountdownCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 6-Unit Countdown Grid (Years, Months, Days, Hours, Minutes, Seconds)
-            FullCountdownGrid(
+            // 6-Unit Countdown all on the same line: Years, Months, Days, Hours, Mins, and Secs
+            SingleLineCountdownRow(
                 breakdown = breakdown,
-                accentColor = accentColor,
-                isLarge = false
+                accentColor = accentColor
             )
 
             if (breakdown.isPast) {

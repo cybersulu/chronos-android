@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
-@Database(entities = [CountdownEntity::class, CategoryEntity::class], version = 4, exportSchema = false)
+@Database(entities = [CountdownEntity::class, CategoryEntity::class], version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun countdownDao(): CountdownDao
@@ -41,6 +41,15 @@ abstract class AppDatabase : RoomDatabase() {
         ) : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
+                INSTANCE?.let { database ->
+                    scope.launch {
+                        populateInitialData(database.countdownDao(), database.categoryDao())
+                    }
+                }
+            }
+
+            override fun onDestructiveMigration(db: SupportSQLiteDatabase) {
+                super.onDestructiveMigration(db)
                 INSTANCE?.let { database ->
                     scope.launch {
                         populateInitialData(database.countdownDao(), database.categoryDao())
