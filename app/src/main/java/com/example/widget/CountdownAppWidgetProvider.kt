@@ -77,6 +77,12 @@ class CountdownAppWidgetProvider : AppWidgetProvider() {
                 CountdownWidget5x1Provider.updateSingleWidgetAsync(context, appWidgetManager, widgetId)
             }
 
+            // Refresh 2x2 square widgets
+            val ids2x2 = appWidgetManager.getAppWidgetIds(ComponentName(context, CountdownWidget2x2Provider::class.java))
+            for (widgetId in ids2x2) {
+                CountdownWidget2x2Provider.updateSingleWidgetAsync(context, appWidgetManager, widgetId)
+            }
+
             // Schedule next tick to fire exactly on the next minute
             scheduleNextMinuteTick(context)
         }
@@ -92,7 +98,8 @@ class CountdownAppWidgetProvider : AppWidgetProvider() {
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val ids3x1 = appWidgetManager.getAppWidgetIds(ComponentName(context, CountdownWidget3x1Provider::class.java))
         val ids5x1 = appWidgetManager.getAppWidgetIds(ComponentName(context, CountdownWidget5x1Provider::class.java))
-        if (ids3x1.isEmpty() && ids5x1.isEmpty()) {
+        val ids2x2 = appWidgetManager.getAppWidgetIds(ComponentName(context, CountdownWidget2x2Provider::class.java))
+        if (ids3x1.isEmpty() && ids5x1.isEmpty() && ids2x2.isEmpty()) {
             cancelMinuteTick(context)
         }
     }
@@ -381,6 +388,11 @@ class CountdownAppWidgetProvider : AppWidgetProvider() {
                 action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
             }
             context.sendBroadcast(intent5x1)
+
+            val intent2x2 = Intent(context, CountdownWidget2x2Provider::class.java).apply {
+                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+            }
+            context.sendBroadcast(intent2x2)
 
             // Re-sync ticker schedule on any explicit update
             scheduleNextMinuteTick(context)

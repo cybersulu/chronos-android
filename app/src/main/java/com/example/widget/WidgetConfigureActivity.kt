@@ -248,6 +248,9 @@ class WidgetConfigureActivity : ComponentActivity() {
             providerClassName.contains("CountdownWidget3x1Provider") -> {
                 CountdownWidget3x1Provider.updateSingleWidgetAsync(this, appWidgetManager, appWidgetId)
             }
+            providerClassName.contains("CountdownWidget2x2Provider") -> {
+                CountdownWidget2x2Provider.updateSingleWidgetAsync(this, appWidgetManager, appWidgetId)
+            }
             else -> {
                 CountdownAppWidgetProvider.updateSingleWidgetAsync(this, appWidgetManager, appWidgetId)
             }

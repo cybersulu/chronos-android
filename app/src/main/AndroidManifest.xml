@@ -82,6 +82,19 @@
                 android:resource="@xml/countdown_widget_5x1_info" />
         </receiver>
 
+        <!-- Home & Lock Screen Square App Widget Provider (2x2 Square) -->
+        <receiver
+            android:name=".widget.CountdownWidget2x2Provider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.ACTION_UPDATE_WIDGET_TICK" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/countdown_widget_2x2_info" />
+        </receiver>
+
         <!-- Notification Alarm Alert Receiver -->
         <receiver
             android:name=".notification.CountdownAlertReceiver"
