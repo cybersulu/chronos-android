@@ -18,9 +18,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -57,10 +60,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -78,6 +83,9 @@ import com.example.ui.components.CreateCustomAlertDialog
 import com.example.ui.components.ManageCategoriesSheet
 import com.example.ui.components.TimeZonePickerSheet
 import com.example.ui.viewmodel.CountdownViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.ExperimentalFoundationApi
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -86,7 +94,11 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalLayoutApi::class,
+    ExperimentalFoundationApi::class
+)
 @Composable
 fun AddEditCountdownScreen(
     timerId: Long = 0,
@@ -142,6 +154,10 @@ fun AddEditCountdownScreen(
         DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
     }
 
+    val scrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+    val notesBringIntoViewRequester = remember { BringIntoViewRequester() }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -171,7 +187,8 @@ fun AddEditCountdownScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .verticalScroll(scrollState)
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
@@ -688,10 +705,20 @@ fun AddEditCountdownScreen(
                 onValueChange = { notes = it },
                 label = { Text("Notes & Details (Optional)") },
                 placeholder = { Text("Location, flight confirmation, reminders, or goals") },
-                maxLines = 3,
+                minLines = 3,
+                maxLines = 5,
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .bringIntoViewRequester(notesBringIntoViewRequester)
+                    .onFocusEvent { focusState ->
+                        if (focusState.isFocused) {
+                            coroutineScope.launch {
+                                delay(250)
+                                notesBringIntoViewRequester.bringIntoView()
+                            }
+                        }
+                    }
                     .testTag("input_countdown_notes")
             )
 
