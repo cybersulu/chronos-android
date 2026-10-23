@@ -103,16 +103,14 @@ class CountdownWidget5x1Provider : AppWidgetProvider() {
                             R.id.widget_5x1_val_months,
                             R.id.widget_5x1_val_days,
                             R.id.widget_5x1_val_hours,
-                            R.id.widget_5x1_val_minutes,
-                            R.id.widget_5x1_val_seconds
+                            R.id.widget_5x1_val_minutes
                         ),
                         lblIds = listOf(
                             R.id.widget_5x1_lbl_years,
                             R.id.widget_5x1_lbl_months,
                             R.id.widget_5x1_lbl_days,
                             R.id.widget_5x1_lbl_hours,
-                            R.id.widget_5x1_lbl_minutes,
-                            R.id.widget_5x1_lbl_seconds
+                            R.id.widget_5x1_lbl_minutes
                         )
                     )
 
@@ -139,21 +137,18 @@ class CountdownWidget5x1Provider : AppWidgetProvider() {
                             val days = breakdown.days
                             val hours = breakdown.hours
                             val minutes = breakdown.minutes
-                            val seconds = breakdown.seconds
 
                             views.setTextViewText(R.id.widget_5x1_val_years, String.format(Locale.US, "%02d", years))
                             views.setTextViewText(R.id.widget_5x1_val_months, String.format(Locale.US, "%02d", months))
                             views.setTextViewText(R.id.widget_5x1_val_days, String.format(Locale.US, "%02d", days))
                             views.setTextViewText(R.id.widget_5x1_val_hours, String.format(Locale.US, "%02d", hours))
                             views.setTextViewText(R.id.widget_5x1_val_minutes, String.format(Locale.US, "%02d", minutes))
-                            views.setTextViewText(R.id.widget_5x1_val_seconds, String.format(Locale.US, "%02d", seconds))
 
                             views.setTextColor(R.id.widget_5x1_val_years, accentColorInt)
                             views.setTextColor(R.id.widget_5x1_val_months, accentColorInt)
                             views.setTextColor(R.id.widget_5x1_val_days, accentColorInt)
                             views.setTextColor(R.id.widget_5x1_val_hours, accentColorInt)
                             views.setTextColor(R.id.widget_5x1_val_minutes, accentColorInt)
-                            views.setTextColor(R.id.widget_5x1_val_seconds, accentColorInt)
 
                             // Don't show time interval if time left is lower than that unit
                             views.setViewVisibility(
@@ -172,16 +167,14 @@ class CountdownWidget5x1Provider : AppWidgetProvider() {
                                 R.id.widget_5x1_block_hours,
                                 if (years > 0L || months > 0L || days > 0L || hours > 0L) View.VISIBLE else View.GONE
                             )
+                            // Minutes is the finest granular unit displayed on the widget; always visible when active
                             views.setViewVisibility(
                                 R.id.widget_5x1_block_minutes,
-                                if (years > 0L || months > 0L || days > 0L || hours > 0L || minutes > 0L) View.VISIBLE else View.GONE
+                                View.VISIBLE
                             )
 
-                            val showSeconds = (years == 0L && months == 0L)
-                            views.setViewVisibility(
-                                R.id.widget_5x1_block_seconds,
-                                if (showSeconds) View.VISIBLE else View.GONE
-                            )
+                            // Seconds are not displayed on widgets (minutes is most granular)
+                            views.setViewVisibility(R.id.widget_5x1_block_seconds, View.GONE)
                         }
 
                         val intent = Intent(context, MainActivity::class.java).apply {

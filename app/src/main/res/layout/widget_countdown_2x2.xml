@@ -67,6 +67,7 @@
 
         <!-- Upper Row (Units 1 & 2) -->
         <LinearLayout
+            android:id="@+id/widget_2x2_row_upper"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
@@ -149,6 +150,7 @@
 
         <!-- Lower Row (Units 3 & 4) -->
         <LinearLayout
+            android:id="@+id/widget_2x2_row_lower"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
@@ -161,7 +163,6 @@
                 android:id="@+id/widget_2x2_block_3"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_marginEnd="3dp"
                 android:layout_weight="1"
                 android:gravity="center"
                 android:orientation="vertical">
@@ -197,7 +198,7 @@
                 android:id="@+id/widget_2x2_block_4"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_marginStart="3dp"
+                android:layout_marginStart="6dp"
                 android:layout_weight="1"
                 android:gravity="center"
                 android:orientation="vertical">

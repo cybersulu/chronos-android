@@ -138,44 +138,75 @@ class CountdownWidget2x2Provider : AppWidgetProvider() {
                             val days = breakdown.days
                             val hours = breakdown.hours
                             val minutes = breakdown.minutes
-                            val seconds = breakdown.seconds
 
-                            // 4 prominent units adapted to countdown magnitude
-                            val (u1Val, u1Lbl, u2Val, u2Lbl, u3Val, u3Lbl, u4Val, u4Lbl) = when {
-                                years > 0L -> Tuple4(
-                                    years, "YEARS",
-                                    months, "MONTHS",
-                                    days, "DAYS",
-                                    hours, "HOURS"
-                                )
-                                months > 0L -> Tuple4(
-                                    months, "MONTHS",
-                                    days, "DAYS",
-                                    hours, "HOURS",
-                                    minutes, "MINS"
-                                )
-                                else -> Tuple4(
-                                    days, "DAYS",
-                                    hours, "HOURS",
-                                    minutes, "MINS",
-                                    seconds, "SECS"
-                                )
+                            // Adapt units according to magnitude (minutes is the finest granular unit)
+                            when {
+                                years > 0L -> {
+                                    views.setViewVisibility(R.id.widget_2x2_row_upper, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_row_lower, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_block_1, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_block_2, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_block_3, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_block_4, View.VISIBLE)
+
+                                    views.setTextViewText(R.id.widget_2x2_val_1, String.format(Locale.US, "%02d", years))
+                                    views.setTextViewText(R.id.widget_2x2_lbl_1, "YEARS")
+                                    views.setTextViewText(R.id.widget_2x2_val_2, String.format(Locale.US, "%02d", months))
+                                    views.setTextViewText(R.id.widget_2x2_lbl_2, "MONTHS")
+                                    views.setTextViewText(R.id.widget_2x2_val_3, String.format(Locale.US, "%02d", days))
+                                    views.setTextViewText(R.id.widget_2x2_lbl_3, "DAYS")
+                                    views.setTextViewText(R.id.widget_2x2_val_4, String.format(Locale.US, "%02d", hours))
+                                    views.setTextViewText(R.id.widget_2x2_lbl_4, "HOURS")
+                                }
+                                months > 0L -> {
+                                    views.setViewVisibility(R.id.widget_2x2_row_upper, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_row_lower, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_block_1, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_block_2, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_block_3, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_block_4, View.VISIBLE)
+
+                                    views.setTextViewText(R.id.widget_2x2_val_1, String.format(Locale.US, "%02d", months))
+                                    views.setTextViewText(R.id.widget_2x2_lbl_1, "MONTHS")
+                                    views.setTextViewText(R.id.widget_2x2_val_2, String.format(Locale.US, "%02d", days))
+                                    views.setTextViewText(R.id.widget_2x2_lbl_2, "DAYS")
+                                    views.setTextViewText(R.id.widget_2x2_val_3, String.format(Locale.US, "%02d", hours))
+                                    views.setTextViewText(R.id.widget_2x2_lbl_3, "HOURS")
+                                    views.setTextViewText(R.id.widget_2x2_val_4, String.format(Locale.US, "%02d", minutes))
+                                    views.setTextViewText(R.id.widget_2x2_lbl_4, "MINS")
+                                }
+                                days > 0L -> {
+                                    views.setViewVisibility(R.id.widget_2x2_row_upper, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_row_lower, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_block_1, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_block_2, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_block_3, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_block_4, View.GONE)
+
+                                    views.setTextViewText(R.id.widget_2x2_val_1, String.format(Locale.US, "%02d", days))
+                                    views.setTextViewText(R.id.widget_2x2_lbl_1, "DAYS")
+                                    views.setTextViewText(R.id.widget_2x2_val_2, String.format(Locale.US, "%02d", hours))
+                                    views.setTextViewText(R.id.widget_2x2_lbl_2, "HOURS")
+                                    views.setTextViewText(R.id.widget_2x2_val_3, String.format(Locale.US, "%02d", minutes))
+                                    views.setTextViewText(R.id.widget_2x2_lbl_3, "MINS")
+                                }
+                                else -> {
+                                    // Under 1 day left: prominent Hours & Minutes
+                                    views.setViewVisibility(R.id.widget_2x2_row_upper, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_row_lower, View.GONE)
+                                    views.setViewVisibility(R.id.widget_2x2_block_1, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_2x2_block_2, View.VISIBLE)
+
+                                    views.setTextViewText(R.id.widget_2x2_val_1, String.format(Locale.US, "%02d", hours))
+                                    views.setTextViewText(R.id.widget_2x2_lbl_1, "HOURS")
+                                    views.setTextViewText(R.id.widget_2x2_val_2, String.format(Locale.US, "%02d", minutes))
+                                    views.setTextViewText(R.id.widget_2x2_lbl_2, "MINS")
+                                }
                             }
 
-                            views.setTextViewText(R.id.widget_2x2_val_1, String.format(Locale.US, "%02d", u1Val))
-                            views.setTextViewText(R.id.widget_2x2_lbl_1, u1Lbl)
                             views.setTextColor(R.id.widget_2x2_val_1, accentColorInt)
-
-                            views.setTextViewText(R.id.widget_2x2_val_2, String.format(Locale.US, "%02d", u2Val))
-                            views.setTextViewText(R.id.widget_2x2_lbl_2, u2Lbl)
                             views.setTextColor(R.id.widget_2x2_val_2, accentColorInt)
-
-                            views.setTextViewText(R.id.widget_2x2_val_3, String.format(Locale.US, "%02d", u3Val))
-                            views.setTextViewText(R.id.widget_2x2_lbl_3, u3Lbl)
                             views.setTextColor(R.id.widget_2x2_val_3, accentColorInt)
-
-                            views.setTextViewText(R.id.widget_2x2_val_4, String.format(Locale.US, "%02d", u4Val))
-                            views.setTextViewText(R.id.widget_2x2_lbl_4, u4Lbl)
                             views.setTextColor(R.id.widget_2x2_val_4, accentColorInt)
                         }
 
@@ -217,12 +248,5 @@ class CountdownWidget2x2Provider : AppWidgetProvider() {
                 }
             }
         }
-
-        private data class Tuple4(
-            val v1: Long, val l1: String,
-            val v2: Long, val l2: String,
-            val v3: Long, val l3: String,
-            val v4: Long, val l4: String
-        )
     }
 }

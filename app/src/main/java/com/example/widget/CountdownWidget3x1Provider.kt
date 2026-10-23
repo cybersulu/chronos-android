@@ -104,16 +104,14 @@ class CountdownWidget3x1Provider : AppWidgetProvider() {
                             R.id.widget_3x1_val_months,
                             R.id.widget_3x1_val_days,
                             R.id.widget_3x1_val_hours,
-                            R.id.widget_3x1_val_minutes,
-                            R.id.widget_3x1_val_seconds
+                            R.id.widget_3x1_val_minutes
                         ),
                         lblIds = listOf(
                             R.id.widget_3x1_lbl_years,
                             R.id.widget_3x1_lbl_months,
                             R.id.widget_3x1_lbl_days,
                             R.id.widget_3x1_lbl_hours,
-                            R.id.widget_3x1_lbl_minutes,
-                            R.id.widget_3x1_lbl_seconds
+                            R.id.widget_3x1_lbl_minutes
                         )
                     )
 
@@ -143,23 +141,20 @@ class CountdownWidget3x1Provider : AppWidgetProvider() {
                             val days = breakdown.days
                             val hours = breakdown.hours
                             val minutes = breakdown.minutes
-                            val seconds = breakdown.seconds
 
                             views.setTextViewText(R.id.widget_3x1_val_years, String.format(Locale.US, "%02d", years))
                             views.setTextViewText(R.id.widget_3x1_val_months, String.format(Locale.US, "%02d", months))
                             views.setTextViewText(R.id.widget_3x1_val_days, String.format(Locale.US, "%02d", days))
                             views.setTextViewText(R.id.widget_3x1_val_hours, String.format(Locale.US, "%02d", hours))
                             views.setTextViewText(R.id.widget_3x1_val_minutes, String.format(Locale.US, "%02d", minutes))
-                            views.setTextViewText(R.id.widget_3x1_val_seconds, String.format(Locale.US, "%02d", seconds))
 
                             views.setTextColor(R.id.widget_3x1_val_years, accentColorInt)
                             views.setTextColor(R.id.widget_3x1_val_months, accentColorInt)
                             views.setTextColor(R.id.widget_3x1_val_days, accentColorInt)
                             views.setTextColor(R.id.widget_3x1_val_hours, accentColorInt)
                             views.setTextColor(R.id.widget_3x1_val_minutes, accentColorInt)
-                            views.setTextColor(R.id.widget_3x1_val_seconds, accentColorInt)
 
-                            // Hide any unit if the time left is lower than that unit:
+                            // Adapt units according to magnitude (minutes is finest granular level; seconds is always hidden)
                             when {
                                 years > 0L -> {
                                     views.setViewVisibility(R.id.widget_3x1_block_years, View.VISIBLE)
@@ -185,29 +180,14 @@ class CountdownWidget3x1Provider : AppWidgetProvider() {
                                     views.setViewVisibility(R.id.widget_3x1_block_minutes, View.VISIBLE)
                                     views.setViewVisibility(R.id.widget_3x1_block_seconds, View.GONE)
                                 }
-                                hours > 0L -> {
+                                else -> {
+                                    // Under 1 day left: show Hours & Minutes
                                     views.setViewVisibility(R.id.widget_3x1_block_years, View.GONE)
                                     views.setViewVisibility(R.id.widget_3x1_block_months, View.GONE)
                                     views.setViewVisibility(R.id.widget_3x1_block_days, View.GONE)
                                     views.setViewVisibility(R.id.widget_3x1_block_hours, View.VISIBLE)
                                     views.setViewVisibility(R.id.widget_3x1_block_minutes, View.VISIBLE)
-                                    views.setViewVisibility(R.id.widget_3x1_block_seconds, View.VISIBLE)
-                                }
-                                minutes > 0L -> {
-                                    views.setViewVisibility(R.id.widget_3x1_block_years, View.GONE)
-                                    views.setViewVisibility(R.id.widget_3x1_block_months, View.GONE)
-                                    views.setViewVisibility(R.id.widget_3x1_block_days, View.GONE)
-                                    views.setViewVisibility(R.id.widget_3x1_block_hours, View.GONE)
-                                    views.setViewVisibility(R.id.widget_3x1_block_minutes, View.VISIBLE)
-                                    views.setViewVisibility(R.id.widget_3x1_block_seconds, View.VISIBLE)
-                                }
-                                else -> {
-                                    views.setViewVisibility(R.id.widget_3x1_block_years, View.GONE)
-                                    views.setViewVisibility(R.id.widget_3x1_block_months, View.GONE)
-                                    views.setViewVisibility(R.id.widget_3x1_block_days, View.GONE)
-                                    views.setViewVisibility(R.id.widget_3x1_block_hours, View.GONE)
-                                    views.setViewVisibility(R.id.widget_3x1_block_minutes, View.GONE)
-                                    views.setViewVisibility(R.id.widget_3x1_block_seconds, View.VISIBLE)
+                                    views.setViewVisibility(R.id.widget_3x1_block_seconds, View.GONE)
                                 }
                             }
                         }
