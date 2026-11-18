@@ -1,6 +1,7 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.AppDatabase
@@ -8,6 +9,7 @@ import com.example.data.CategoryEntity
 import com.example.data.CountdownEntity
 import com.example.data.CountdownRepository
 import com.example.model.CountdownCategories
+import com.example.model.CountdownSortOption
 import com.example.notification.NotificationScheduler
 import com.example.ui.components.CategoryCountItem
 import com.example.widget.CountdownAppWidgetProvider
@@ -44,8 +46,18 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
             initialValue = emptyList()
         )
 
+    private val prefs = application.getSharedPreferences("chronos_prefs", Context.MODE_PRIVATE)
+
     private val _selectedCategory = MutableStateFlow(CountdownCategories.ALL)
     val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
+
+    private val _sortOption = MutableStateFlow(loadSavedSortOption())
+    val sortOption: StateFlow<CountdownSortOption> = _sortOption.asStateFlow()
+
+    private fun loadSavedSortOption(): CountdownSortOption {
+        val savedName = prefs.getString("countdown_sort_option", null)
+        return CountdownSortOption.entries.find { it.name == savedName } ?: CountdownSortOption.CUSTOM
+    }
 
     // 1-second global ticker for fluid second-by-second countdown updates across all UI
     private val _currentTickerTime = MutableStateFlow(System.currentTimeMillis())
@@ -98,13 +110,18 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
         initialValue = listOf(CategoryCountItem(CountdownCategories.ALL, 0))
     )
 
-    // Filtered Timers based on category selection
-    val filteredTimers: StateFlow<List<CountdownEntity>> = combine(allTimers, selectedCategory) { timers, category ->
-        if (category == CountdownCategories.ALL) {
+    // Filtered & Sorted Timers based on category selection and sort option
+    val filteredTimers: StateFlow<List<CountdownEntity>> = combine(
+        allTimers,
+        selectedCategory,
+        sortOption
+    ) { timers, category, sort ->
+        val filtered = if (category == CountdownCategories.ALL) {
             timers
         } else {
             timers.filter { it.category.equals(category, ignoreCase = true) }
         }
+        sort.sort(filtered)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -113,6 +130,11 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun selectCategory(category: String) {
         _selectedCategory.value = category
+    }
+
+    fun selectSortOption(option: CountdownSortOption) {
+        _sortOption.value = option
+        prefs.edit().putString("countdown_sort_option", option.name).apply()
     }
 
     fun addCategory(name: String, iconName: String, colorHex: Long) {
@@ -214,12 +236,28 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun persistTimerOrder(reorderedTimers: List<CountdownEntity>) {
+        viewModelScope.launch {
+            if (_sortOption.value != CountdownSortOption.CUSTOM) {
+                selectSortOption(CountdownSortOption.CUSTOM)
+            }
+            repository.applyFilteredOrder(reorderedTimers.map { it.id })
+            CountdownAppWidgetProvider.triggerUpdate(getApplication())
+        }
+    }
+
     fun moveTimerUp(timer: CountdownEntity) {
         viewModelScope.launch {
-            val currentList = allTimers.value
+            val currentList = filteredTimers.value
             val index = currentList.indexOfFirst { it.id == timer.id }
             if (index > 0) {
-                repository.moveItem(index, index - 1)
+                val mutable = currentList.toMutableList()
+                val moved = mutable.removeAt(index)
+                mutable.add(index - 1, moved)
+                if (_sortOption.value != CountdownSortOption.CUSTOM) {
+                    selectSortOption(CountdownSortOption.CUSTOM)
+                }
+                repository.applyFilteredOrder(mutable.map { it.id })
                 CountdownAppWidgetProvider.triggerUpdate(getApplication())
             }
         }
@@ -227,10 +265,16 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun moveTimerDown(timer: CountdownEntity) {
         viewModelScope.launch {
-            val currentList = allTimers.value
+            val currentList = filteredTimers.value
             val index = currentList.indexOfFirst { it.id == timer.id }
             if (index >= 0 && index < currentList.size - 1) {
-                repository.moveItem(index, index + 1)
+                val mutable = currentList.toMutableList()
+                val moved = mutable.removeAt(index)
+                mutable.add(index + 1, moved)
+                if (_sortOption.value != CountdownSortOption.CUSTOM) {
+                    selectSortOption(CountdownSortOption.CUSTOM)
+                }
+                repository.applyFilteredOrder(mutable.map { it.id })
                 CountdownAppWidgetProvider.triggerUpdate(getApplication())
             }
         }

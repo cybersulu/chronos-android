@@ -41,6 +41,22 @@ class CountdownRepository(
         }
     }
 
+    suspend fun applyFilteredOrder(reorderedFilteredIds: List<Long>) {
+        val all = countdownDao.getAllTimersList()
+        val reorderedSet = reorderedFilteredIds.toSet()
+        val byId = all.associateBy { it.id }
+        val iterator = reorderedFilteredIds.iterator()
+
+        val merged = all.map { entity ->
+            if (entity.id in reorderedSet && iterator.hasNext()) {
+                byId[iterator.next()] ?: entity
+            } else {
+                entity
+            }
+        }
+        reorderTimers(merged)
+    }
+
     suspend fun insertCategory(category: CategoryEntity): Long = categoryDao.insertCategory(category)
 
     suspend fun updateCategory(oldName: String, category: CategoryEntity) {

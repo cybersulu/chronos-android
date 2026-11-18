@@ -10,10 +10,15 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,27 +27,28 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.HourglassBottom
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -56,25 +62,31 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -82,14 +94,17 @@ import com.example.data.CategoryEntity
 import com.example.data.CountdownEntity
 import com.example.model.CountdownBreakdown
 import com.example.model.CountdownCategories
+import com.example.model.CountdownSortOption
 import com.example.ui.components.CategoryEditDialog
 import com.example.ui.components.CategoryFilterBar
-import com.example.ui.components.FullCountdownGrid
 import com.example.ui.components.SingleLineCountdownRow
 import com.example.ui.components.ManageCategoriesSheet
-import com.example.ui.theme.TimerColorPalette
 import com.example.ui.viewmodel.CountdownViewModel
-import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.math.max
+import kotlin.math.min
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,17 +119,64 @@ fun CountdownListScreen(
     val categoryCounts by viewModel.categoryCounts.collectAsState()
     val customCategories by viewModel.customCategories.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
+    val sortOption by viewModel.sortOption.collectAsState()
     // Observe ticker so all items recompose smoothly every second
     val tickerTime by viewModel.currentTickerTime.collectAsState()
 
     val context = LocalContext.current
+    val density = LocalDensity.current
+    val listState = rememberLazyListState()
 
-    // Drag-and-drop state
-    var draggedItemIndex by remember { mutableIntStateOf(-1) }
-    var dragOffsetY by remember { mutableFloatStateOf(0f) }
+    val itemSpacingDp = 16.dp
+    val itemSpacingPx = with(density) { itemSpacingDp.toPx() }
+    val autoScrollZonePx = with(density) { 88.dp.toPx() }
+    val maxAutoScrollSpeedPxPerSec = with(density) { 780.dp.toPx() }
+    val minAutoScrollSpeedPxPerSec = with(density) { 140.dp.toPx() }
+    val edgeDragTriggerPx = with(density) { 8.dp.toPx() }
+
+    // Drag-and-drop state (optimistic local list during drag to avoid Room Flow races)
+    var localTimers by remember { mutableStateOf(filteredTimers) }
+    var pendingPersistedIds by remember { mutableStateOf<List<Long>?>(null) }
+    var draggedItemId by remember { mutableStateOf<Long?>(null) }
+    var draggedDistance by remember { mutableFloatStateOf(0f) }
+    var pointerYInViewport by remember { mutableFloatStateOf(0f) }
+    var minPointerY by remember { mutableFloatStateOf(0f) }
+    var maxPointerY by remember { mutableFloatStateOf(0f) }
+    var lazyColumnCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var showManageCategoriesSheet by remember { mutableStateOf(false) }
     var categoryToEdit by remember { mutableStateOf<CategoryEntity?>(null) }
+    var showSortMenu by remember { mutableStateOf(false) }
+    var lastAppliedSort by remember { mutableStateOf(sortOption) }
+
+    val isDragging = draggedItemId != null
+
+    LaunchedEffect(sortOption) {
+        if (lastAppliedSort != sortOption) {
+            lastAppliedSort = sortOption
+            if (localTimers.isNotEmpty() && !isDragging) {
+                listState.animateScrollToItem(0)
+            }
+        }
+    }
+
+    LaunchedEffect(filteredTimers, isDragging) {
+        if (!isDragging) {
+            val pending = pendingPersistedIds
+            if (pending == null) {
+                localTimers = filteredTimers
+            } else if (filteredTimers.map { it.id } == pending || filteredTimers.size != localTimers.size) {
+                pendingPersistedIds = null
+                localTimers = filteredTimers
+            } else {
+                // Wait briefly for Room emission to match persisted order, then sync regardless
+                delay(400L)
+                pendingPersistedIds = null
+                localTimers = filteredTimers
+            }
+        }
+    }
 
     fun triggerDragHaptic() {
         try {
@@ -133,6 +195,125 @@ fun CountdownListScreen(
             }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    fun checkAndSwap() {
+        val activeId = draggedItemId ?: return
+        val currentIndex = localTimers.indexOfFirst { it.id == activeId }
+        if (currentIndex == -1) return
+
+        val visibleItems = listState.layoutInfo.visibleItemsInfo
+        val draggedInfo = visibleItems.find { it.key == activeId } ?: return
+        // Wait until LazyColumn layout reflects the latest swap before checking again
+        if (draggedInfo.index != currentIndex) return
+
+        val visualTop = draggedInfo.offset + draggedDistance
+        val visualBottom = visualTop + draggedInfo.size
+
+        if (currentIndex < localTimers.lastIndex) {
+            val nextId = localTimers[currentIndex + 1].id
+            val nextInfo = visibleItems.find { it.key == nextId }
+            if (nextInfo != null) {
+                val nextMidpoint = nextInfo.offset + nextInfo.size / 2f
+                if (visualBottom > nextMidpoint) {
+                    val firstIdx = listState.firstVisibleItemIndex
+                    val firstOffset = listState.firstVisibleItemScrollOffset
+
+                    val mutable = localTimers.toMutableList()
+                    val moved = mutable.removeAt(currentIndex)
+                    mutable.add(currentIndex + 1, moved)
+                    localTimers = mutable
+                    draggedDistance -= (nextInfo.size + itemSpacingPx)
+
+                    if (currentIndex <= firstIdx || (currentIndex + 1) <= firstIdx) {
+                        listState.requestScrollToItem(firstIdx, firstOffset)
+                    }
+                    triggerDragHaptic()
+                    return
+                }
+            }
+        }
+
+        if (currentIndex > 0) {
+            val prevId = localTimers[currentIndex - 1].id
+            val prevInfo = visibleItems.find { it.key == prevId }
+            if (prevInfo != null) {
+                val prevMidpoint = prevInfo.offset + prevInfo.size / 2f
+                if (visualTop < prevMidpoint) {
+                    val firstIdx = listState.firstVisibleItemIndex
+                    val firstOffset = listState.firstVisibleItemScrollOffset
+
+                    val mutable = localTimers.toMutableList()
+                    val moved = mutable.removeAt(currentIndex)
+                    mutable.add(currentIndex - 1, moved)
+                    localTimers = mutable
+                    draggedDistance += (prevInfo.size + itemSpacingPx)
+
+                    if (currentIndex <= firstIdx || (currentIndex - 1) <= firstIdx) {
+                        listState.requestScrollToItem(firstIdx, firstOffset)
+                    }
+                    triggerDragHaptic()
+                }
+            }
+        }
+    }
+
+    // Continuous smooth edge auto-scroll loop while dragging near top or bottom of LazyColumn
+    LaunchedEffect(draggedItemId) {
+        val activeId = draggedItemId ?: return@LaunchedEffect
+        var lastFrameNanos = 0L
+
+        while (isActive && draggedItemId == activeId) {
+            val scrollDelta = withFrameNanos { frameNanos ->
+                if (lastFrameNanos == 0L) {
+                    lastFrameNanos = frameNanos
+                    return@withFrameNanos 0f
+                }
+                val dt = ((frameNanos - lastFrameNanos) / 1_000_000_000f).coerceIn(0f, 0.05f)
+                lastFrameNanos = frameNanos
+
+                val layoutInfo = listState.layoutInfo
+                val viewportStart = layoutInfo.viewportStartOffset.toFloat()
+                val viewportEnd = layoutInfo.viewportEndOffset.toFloat()
+                val viewportHeight = viewportEnd - viewportStart
+                if (viewportHeight <= 0f) return@withFrameNanos 0f
+
+                val effectiveZone = min(autoScrollZonePx, viewportHeight * 0.22f)
+                val pointerY = pointerYInViewport
+
+                when {
+                    listState.canScrollBackward &&
+                        pointerY < viewportStart + effectiveZone &&
+                        pointerY < maxPointerY - edgeDragTriggerPx -> {
+                        val depth = ((viewportStart + effectiveZone - pointerY) / effectiveZone).coerceIn(0f, 1.3f)
+                        val speed = minAutoScrollSpeedPxPerSec +
+                            (maxAutoScrollSpeedPxPerSec - minAutoScrollSpeedPxPerSec) * min(depth, 1f) *
+                            max(1f, depth)
+                        -speed * dt
+                    }
+                    listState.canScrollForward &&
+                        pointerY > viewportEnd - effectiveZone &&
+                        pointerY > minPointerY + edgeDragTriggerPx -> {
+                        val depth = ((pointerY - (viewportEnd - effectiveZone)) / effectiveZone).coerceIn(0f, 1.3f)
+                        val speed = minAutoScrollSpeedPxPerSec +
+                            (maxAutoScrollSpeedPxPerSec - minAutoScrollSpeedPxPerSec) * min(depth, 1f) *
+                            max(1f, depth)
+                        speed * dt
+                    }
+                    else -> 0f
+                }
+            }
+
+            if (scrollDelta != 0f) {
+                val consumed = listState.scrollBy(scrollDelta)
+                if (consumed != 0f) {
+                    draggedDistance += consumed
+                    checkAndSwap()
+                }
+            } else {
+                checkAndSwap()
+            }
         }
     }
 
@@ -179,6 +360,120 @@ fun CountdownListScreen(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                        }
+                    }
+                },
+                actions = {
+                    Box(modifier = Modifier.padding(end = 8.dp)) {
+                        val isCustom = sortOption == CountdownSortOption.CUSTOM
+                        Surface(
+                            onClick = { showSortMenu = true },
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isCustom) {
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                            } else {
+                                MaterialTheme.colorScheme.primaryContainer
+                            },
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = if (isCustom) {
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                } else {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                                }
+                            ),
+                            modifier = Modifier
+                                .heightIn(min = 48.dp)
+                                .testTag("sort_menu_button")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Sort,
+                                    contentDescription = "Sort countdowns",
+                                    tint = if (isCustom) {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    } else {
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    },
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = sortOption.shortLabel,
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = if (isCustom) {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    } else {
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    }
+                                )
+                            }
+                        }
+
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false }
+                        ) {
+                            CountdownSortOption.entries.forEach { option ->
+                                val isSelected = option == sortOption
+                                val optionIcon = when (option) {
+                                    CountdownSortOption.CUSTOM -> Icons.Default.DragHandle
+                                    CountdownSortOption.CHRONOLOGICAL_ASC -> Icons.Default.ArrowUpward
+                                    CountdownSortOption.CHRONOLOGICAL_DESC -> Icons.Default.ArrowDownward
+                                    CountdownSortOption.ALPHABETICAL_ASC,
+                                    CountdownSortOption.ALPHABETICAL_DESC -> Icons.Default.SortByAlpha
+                                }
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(
+                                                text = option.menuLabel,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) {
+                                                    MaterialTheme.colorScheme.primary
+                                                } else {
+                                                    MaterialTheme.colorScheme.onSurface
+                                                }
+                                            )
+                                            Text(
+                                                text = option.subtitle,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = optionIcon,
+                                            contentDescription = null,
+                                            tint = if (isSelected) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            }
+                                        )
+                                    },
+                                    trailingIcon = if (isSelected) {
+                                        {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Selected",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    } else null,
+                                    onClick = {
+                                        showSortMenu = false
+                                        viewModel.selectSortOption(option)
+                                    },
+                                    modifier = Modifier.testTag("sort_option_${option.name.lowercase()}")
+                                )
+                            }
                         }
                     }
                 },
@@ -285,23 +580,27 @@ fun CountdownListScreen(
                 )
             }
 
-            if (filteredTimers.isEmpty()) {
+            if (localTimers.isEmpty()) {
                 EmptyStateView(
                     category = selectedCategory,
                     onAddNew = onNavigateToAdd
                 )
             } else {
                 LazyColumn(
+                    state = listState,
+                    userScrollEnabled = !isDragging,
                     modifier = Modifier
                         .fillMaxSize()
+                        .onGloballyPositioned { lazyColumnCoords = it }
                         .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(itemSpacingDp)
                 ) {
                     itemsIndexed(
-                        items = filteredTimers,
+                        items = localTimers,
                         key = { _, item -> item.id }
                     ) { index, timer ->
-                        val isBeingDragged = draggedItemIndex == index
+                        val isBeingDragged = draggedItemId == timer.id
+                        var handleCoords by remember(timer.id) { mutableStateOf<LayoutCoordinates?>(null) }
 
                         // Use the default Accent Color set for the timer's category
                         val itemColor = Color(CountdownCategories.getColorHexForCategory(timer.category))
@@ -317,52 +616,109 @@ fun CountdownListScreen(
                             breakdown = breakdown,
                             accentColor = itemColor,
                             isBeingDragged = isBeingDragged,
-                            dragOffsetY = if (isBeingDragged) dragOffsetY else 0f,
+                            dragOffsetY = if (isBeingDragged) draggedDistance else 0f,
+                            itemModifier = if (isBeingDragged) {
+                                Modifier
+                            } else {
+                                Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null)
+                            },
                             onCardClick = { onNavigateToDetail(timer.id) },
                             onEdit = { onNavigateToEdit(timer.id) },
                             onDelete = { viewModel.deleteTimer(timer) },
                             onMoveUp = { viewModel.moveTimerUp(timer) },
                             onMoveDown = { viewModel.moveTimerDown(timer) },
                             canMoveUp = index > 0,
-                            canMoveDown = index < filteredTimers.size - 1,
-                            dragModifier = Modifier.pointerInput(timer.id) {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = {
-                                        draggedItemIndex = index
-                                        dragOffsetY = 0f
-                                        triggerDragHaptic()
-                                    },
-                                    onDrag = { change, dragAmount ->
-                                        change.consume()
-                                        dragOffsetY += dragAmount.y
-
-                                        val threshold = 160f
-                                        if (dragOffsetY > threshold && draggedItemIndex < filteredTimers.size - 1) {
-                                            viewModel.moveTimer(draggedItemIndex, draggedItemIndex + 1)
-                                            draggedItemIndex += 1
-                                            dragOffsetY -= threshold
-                                            triggerDragHaptic()
-                                        } else if (dragOffsetY < -threshold && draggedItemIndex > 0) {
-                                            viewModel.moveTimer(draggedItemIndex, draggedItemIndex - 1)
-                                            draggedItemIndex -= 1
-                                            dragOffsetY += threshold
-                                            triggerDragHaptic()
+                            canMoveDown = index < localTimers.size - 1,
+                            dragModifier = Modifier
+                                .onGloballyPositioned { handleCoords = it }
+                                .pointerInput(timer.id) {
+                                    fun startDragAt(localStartPos: Offset) {
+                                        val lCoords = lazyColumnCoords
+                                        val hCoords = handleCoords
+                                        val startY = if (lCoords != null && hCoords != null && lCoords.isAttached && hCoords.isAttached) {
+                                            lCoords.localPositionOf(hCoords, localStartPos).y
+                                        } else {
+                                            val info = listState.layoutInfo.visibleItemsInfo.find { it.key == timer.id }
+                                            (info?.offset ?: 0).toFloat() + localStartPos.y
                                         }
-                                    },
-                                    onDragEnd = {
-                                        draggedItemIndex = -1
-                                        dragOffsetY = 0f
-                                    },
-                                    onDragCancel = {
-                                        draggedItemIndex = -1
-                                        dragOffsetY = 0f
+                                        draggedItemId = timer.id
+                                        draggedDistance = 0f
+                                        pointerYInViewport = startY
+                                        minPointerY = startY
+                                        maxPointerY = startY
+                                        triggerDragHaptic()
                                     }
-                                )
-                            }
+
+                                    fun handleDragStep(localPos: Offset, dragDeltaY: Float) {
+                                        draggedDistance += dragDeltaY
+                                        val lCoords = lazyColumnCoords
+                                        val hCoords = handleCoords
+                                        val currentY = if (lCoords != null && hCoords != null && lCoords.isAttached && hCoords.isAttached) {
+                                            lCoords.localPositionOf(hCoords, localPos).y
+                                        } else {
+                                            pointerYInViewport + dragDeltaY
+                                        }
+                                        pointerYInViewport = currentY
+                                        if (currentY < minPointerY) minPointerY = currentY
+                                        if (currentY > maxPointerY) maxPointerY = currentY
+                                        checkAndSwap()
+                                    }
+
+                                    fun finishDrag(commit: Boolean) {
+                                        if (commit && localTimers.map { it.id } != filteredTimers.map { it.id }) {
+                                            pendingPersistedIds = localTimers.map { it.id }
+                                            viewModel.persistTimerOrder(localTimers)
+                                        } else if (!commit) {
+                                            localTimers = filteredTimers
+                                        }
+                                        draggedItemId = null
+                                        draggedDistance = 0f
+                                    }
+
+                                    awaitEachGesture {
+                                        val down = awaitFirstDown(requireUnconsumed = false)
+                                        val longPressTimeout = viewConfiguration.longPressTimeoutMillis
+
+                                        val immediateDrag = withTimeoutOrNull(longPressTimeout) {
+                                            var overSlop = Offset.Zero
+                                            val dragChange = awaitTouchSlopOrCancellation(down.id) { change, over ->
+                                                change.consume()
+                                                overSlop = over
+                                            }
+                                            if (dragChange != null) Pair(dragChange, overSlop) else null
+                                        }
+
+                                        if (immediateDrag != null) {
+                                            val (dragChange, overSlop) = immediateDrag
+                                            startDragAt(dragChange.position)
+                                            if (overSlop.y != 0f) {
+                                                handleDragStep(dragChange.position, overSlop.y)
+                                            }
+                                            val finished = drag(dragChange.id) { change ->
+                                                val delta = change.positionChange()
+                                                change.consume()
+                                                if (delta.y != 0f) {
+                                                    handleDragStep(change.position, delta.y)
+                                                }
+                                            }
+                                            finishDrag(commit = finished)
+                                        } else if (currentEvent.changes.any { it.id == down.id && it.pressed }) {
+                                            startDragAt(down.position)
+                                            val finished = drag(down.id) { change ->
+                                                val delta = change.positionChange()
+                                                change.consume()
+                                                if (delta.y != 0f) {
+                                                    handleDragStep(change.position, delta.y)
+                                                }
+                                            }
+                                            finishDrag(commit = finished)
+                                        }
+                                    }
+                                }
                         )
                     }
 
-                    item {
+                    item(key = "bottom_spacer") {
                         Spacer(modifier = Modifier.height(80.dp))
                     }
                 }
@@ -378,6 +734,7 @@ fun CountdownCard(
     accentColor: Color,
     isBeingDragged: Boolean,
     dragOffsetY: Float,
+    itemModifier: Modifier = Modifier,
     onCardClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -391,10 +748,16 @@ fun CountdownCard(
     val cardShape = RoundedCornerShape(24.dp)
 
     Box(
-        modifier = Modifier
+        modifier = itemModifier
             .fillMaxWidth()
-            .offset { IntOffset(0, dragOffsetY.roundToInt()) }
             .zIndex(if (isBeingDragged) 10f else 1f)
+            .graphicsLayer {
+                translationY = dragOffsetY
+                if (isBeingDragged) {
+                    scaleX = 1.02f
+                    scaleY = 1.02f
+                }
+            }
             .shadow(
                 elevation = if (isBeingDragged) 16.dp else 4.dp,
                 shape = cardShape,
@@ -466,11 +829,14 @@ fun CountdownCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    // Long press drag handle
+                    // Drag handle (supports both immediate drag and long-press drag)
                     Box(
                         modifier = dragModifier
+                            .size(40.dp)
                             .clip(CircleShape)
-                            .padding(6.dp),
+                            .background(
+                                if (isBeingDragged) accentColor.copy(alpha = 0.16f) else Color.Transparent
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(

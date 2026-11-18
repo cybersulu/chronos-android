@@ -74,4 +74,34 @@ class ExampleRobolectricTest {
     val alerts = timer.getAlertMinutes()
     assertEquals(listOf(0, 15, 60, 1440), alerts)
   }
+
+  @Test
+  fun `test chronological and alphabetical forward and reverse sorting`() {
+    val timers = listOf(
+      com.example.data.CountdownEntity(id = 1, title = "charlie", targetEpochMillis = 3000L, timeZoneId = "UTC", orderIndex = 0),
+      com.example.data.CountdownEntity(id = 2, title = "Alpha", targetEpochMillis = 1000L, timeZoneId = "UTC", orderIndex = 1),
+      com.example.data.CountdownEntity(id = 3, title = "Bravo", targetEpochMillis = 2000L, timeZoneId = "UTC", orderIndex = 2)
+    )
+
+    assertEquals(
+      listOf(1L, 2L, 3L),
+      com.example.model.CountdownSortOption.CUSTOM.sort(timers).map { it.id }
+    )
+    assertEquals(
+      listOf(2L, 3L, 1L),
+      com.example.model.CountdownSortOption.CHRONOLOGICAL_ASC.sort(timers).map { it.id }
+    )
+    assertEquals(
+      listOf(1L, 3L, 2L),
+      com.example.model.CountdownSortOption.CHRONOLOGICAL_DESC.sort(timers).map { it.id }
+    )
+    assertEquals(
+      listOf(2L, 3L, 1L),
+      com.example.model.CountdownSortOption.ALPHABETICAL_ASC.sort(timers).map { it.id }
+    )
+    assertEquals(
+      listOf(1L, 3L, 2L),
+      com.example.model.CountdownSortOption.ALPHABETICAL_DESC.sort(timers).map { it.id }
+    )
+  }
 }
