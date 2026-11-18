@@ -82,4 +82,4 @@ We may update this Privacy Policy from time to time to reflect changes in app fe
 
 If you have any questions, concerns, or feedback regarding this Privacy Policy or the Chronos app, please contact us at:
 
-- **Email:** [teohpix@gmail.com](mailto:teohpix@gmail.com)
+- **Email:** [help@cybersulu.com](mailto:help@cybersulu.com)
