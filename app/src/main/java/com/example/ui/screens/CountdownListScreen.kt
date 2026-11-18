@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
@@ -49,18 +50,18 @@ import androidx.compose.material.icons.filled.HourglassBottom
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.SortByAlpha
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -68,6 +69,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -101,7 +103,9 @@ import com.example.ui.components.SingleLineCountdownRow
 import com.example.ui.components.ManageCategoriesSheet
 import com.example.ui.viewmodel.CountdownViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.max
 import kotlin.math.min
@@ -120,8 +124,6 @@ fun CountdownListScreen(
     val customCategories by viewModel.customCategories.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val sortOption by viewModel.sortOption.collectAsState()
-    // Observe ticker so all items recompose smoothly every second
-    val tickerTime by viewModel.currentTickerTime.collectAsState()
 
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -147,7 +149,8 @@ fun CountdownListScreen(
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var showManageCategoriesSheet by remember { mutableStateOf(false) }
     var categoryToEdit by remember { mutableStateOf<CategoryEntity?>(null) }
-    var showSortMenu by remember { mutableStateOf(false) }
+    var showSortSheet by remember { mutableStateOf(false) }
+    var cardOptionsTarget by remember { mutableStateOf<CountdownEntity?>(null) }
     var lastAppliedSort by remember { mutableStateOf(sortOption) }
 
     val isDragging = draggedItemId != null
@@ -367,7 +370,7 @@ fun CountdownListScreen(
                     Box(modifier = Modifier.padding(end = 8.dp)) {
                         val isCustom = sortOption == CountdownSortOption.CUSTOM
                         Surface(
-                            onClick = { showSortMenu = true },
+                            onClick = { showSortSheet = true },
                             shape = RoundedCornerShape(14.dp),
                             color = if (isCustom) {
                                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
@@ -411,67 +414,6 @@ fun CountdownListScreen(
                                     } else {
                                         MaterialTheme.colorScheme.onPrimaryContainer
                                     }
-                                )
-                            }
-                        }
-
-                        DropdownMenu(
-                            expanded = showSortMenu,
-                            onDismissRequest = { showSortMenu = false }
-                        ) {
-                            CountdownSortOption.entries.forEach { option ->
-                                val isSelected = option == sortOption
-                                val optionIcon = when (option) {
-                                    CountdownSortOption.CUSTOM -> Icons.Default.DragHandle
-                                    CountdownSortOption.CHRONOLOGICAL_ASC -> Icons.Default.ArrowUpward
-                                    CountdownSortOption.CHRONOLOGICAL_DESC -> Icons.Default.ArrowDownward
-                                    CountdownSortOption.ALPHABETICAL_ASC,
-                                    CountdownSortOption.ALPHABETICAL_DESC -> Icons.Default.SortByAlpha
-                                }
-                                DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text(
-                                                text = option.menuLabel,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                color = if (isSelected) {
-                                                    MaterialTheme.colorScheme.primary
-                                                } else {
-                                                    MaterialTheme.colorScheme.onSurface
-                                                }
-                                            )
-                                            Text(
-                                                text = option.subtitle,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = optionIcon,
-                                            contentDescription = null,
-                                            tint = if (isSelected) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                            }
-                                        )
-                                    },
-                                    trailingIcon = if (isSelected) {
-                                        {
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = "Selected",
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    } else null,
-                                    onClick = {
-                                        showSortMenu = false
-                                        viewModel.selectSortOption(option)
-                                    },
-                                    modifier = Modifier.testTag("sort_option_${option.name.lowercase()}")
                                 )
                             }
                         }
@@ -580,6 +522,45 @@ fun CountdownListScreen(
                 )
             }
 
+            if (showSortSheet) {
+                SortOptionsSheet(
+                    currentSort = sortOption,
+                    onSelectSort = { option ->
+                        showSortSheet = false
+                        viewModel.selectSortOption(option)
+                    },
+                    onDismiss = { showSortSheet = false }
+                )
+            }
+
+            cardOptionsTarget?.let { targetTimer ->
+                val targetIndex = localTimers.indexOfFirst { it.id == targetTimer.id }
+                if (targetIndex >= 0) {
+                    CardOptionsSheet(
+                        timer = targetTimer,
+                        canMoveUp = targetIndex > 0,
+                        canMoveDown = targetIndex < localTimers.size - 1,
+                        onDismiss = { cardOptionsTarget = null },
+                        onMoveUp = {
+                            cardOptionsTarget = null
+                            viewModel.moveTimerUp(targetTimer)
+                        },
+                        onMoveDown = {
+                            cardOptionsTarget = null
+                            viewModel.moveTimerDown(targetTimer)
+                        },
+                        onEdit = {
+                            cardOptionsTarget = null
+                            onNavigateToEdit(targetTimer.id)
+                        },
+                        onDelete = {
+                            cardOptionsTarget = null
+                            viewModel.deleteTimer(targetTimer)
+                        }
+                    )
+                }
+            }
+
             if (localTimers.isEmpty()) {
                 EmptyStateView(
                     category = selectedCategory,
@@ -604,16 +585,10 @@ fun CountdownListScreen(
 
                         // Use the default Accent Color set for the timer's category
                         val itemColor = Color(CountdownCategories.getColorHexForCategory(timer.category))
-                        val is24Hour = remember(context) { DateFormat.is24HourFormat(context) }
-
-                        // Recompute with current ticker
-                        val breakdown = remember(timer.targetEpochMillis, timer.timeZoneId, tickerTime, is24Hour) {
-                            CountdownBreakdown.compute(timer.targetEpochMillis, timer.timeZoneId, is24Hour)
-                        }
 
                         CountdownCard(
                             timer = timer,
-                            breakdown = breakdown,
+                            tickerFlow = viewModel.currentTickerTime,
                             accentColor = itemColor,
                             isBeingDragged = isBeingDragged,
                             dragOffsetY = if (isBeingDragged) draggedDistance else 0f,
@@ -623,12 +598,7 @@ fun CountdownListScreen(
                                 Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null)
                             },
                             onCardClick = { onNavigateToDetail(timer.id) },
-                            onEdit = { onNavigateToEdit(timer.id) },
-                            onDelete = { viewModel.deleteTimer(timer) },
-                            onMoveUp = { viewModel.moveTimerUp(timer) },
-                            onMoveDown = { viewModel.moveTimerDown(timer) },
-                            canMoveUp = index > 0,
-                            canMoveDown = index < localTimers.size - 1,
+                            onOpenOptions = { cardOptionsTarget = timer },
                             dragModifier = Modifier
                                 .onGloballyPositioned { handleCoords = it }
                                 .pointerInput(timer.id) {
@@ -730,21 +700,21 @@ fun CountdownListScreen(
 @Composable
 fun CountdownCard(
     timer: CountdownEntity,
-    breakdown: CountdownBreakdown,
+    tickerFlow: StateFlow<Long>,
     accentColor: Color,
     isBeingDragged: Boolean,
     dragOffsetY: Float,
     itemModifier: Modifier = Modifier,
     onCardClick: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
-    canMoveUp: Boolean,
-    canMoveDown: Boolean,
+    onOpenOptions: () -> Unit,
     dragModifier: Modifier = Modifier
 ) {
-    var menuExpanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val tickerTime by tickerFlow.collectAsState()
+    val is24Hour = remember(context) { DateFormat.is24HourFormat(context) }
+    val breakdown = remember(timer.targetEpochMillis, timer.timeZoneId, tickerTime, is24Hour) {
+        CountdownBreakdown.compute(timer.targetEpochMillis, timer.timeZoneId, is24Hour)
+    }
     val cardShape = RoundedCornerShape(24.dp)
 
     Box(
@@ -847,72 +817,18 @@ fun CountdownCard(
                         )
                     }
 
-                    // Overflow Menu
-                    Box {
-                        IconButton(
-                            onClick = { menuExpanded = true },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = "Options",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = menuExpanded,
-                            onDismissRequest = { menuExpanded = false }
-                        ) {
-                            if (canMoveUp) {
-                                DropdownMenuItem(
-                                    text = { Text("Move Up") },
-                                    leadingIcon = {
-                                        Icon(imageVector = Icons.Default.ArrowUpward, contentDescription = null)
-                                    },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onMoveUp()
-                                    }
-                                )
-                            }
-                            if (canMoveDown) {
-                                DropdownMenuItem(
-                                    text = { Text("Move Down") },
-                                    leadingIcon = {
-                                        Icon(imageVector = Icons.Default.ArrowDownward, contentDescription = null)
-                                    },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onMoveDown()
-                                    }
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = { Text("Edit") },
-                                leadingIcon = {
-                                    Icon(imageVector = Icons.Default.Edit, contentDescription = null)
-                                },
-                                onClick = {
-                                    menuExpanded = false
-                                    onEdit()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                },
-                                onClick = {
-                                    menuExpanded = false
-                                    onDelete()
-                                }
-                            )
-                        }
+                    // Overflow Menu trigger (opens ModalBottomSheet)
+                    IconButton(
+                        onClick = onOpenOptions,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .testTag("card_options_button_${timer.id}")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Options",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -979,6 +895,258 @@ fun CountdownCard(
                     )
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SortOptionsSheet(
+    currentSort: CountdownSortOption,
+    onSelectSort: (CountdownSortOption) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    var isDismissing by remember { mutableStateOf(false) }
+
+    fun closeThen(action: () -> Unit) {
+        if (isDismissing) return
+        isDismissing = true
+        scope.launch {
+            sheetState.hide()
+        }.invokeOnCompletion {
+            action()
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.testTag("sheet_sort_options")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Sort Countdowns",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                )
+                IconButton(onClick = { closeThen(onDismiss) }) {
+                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                }
+            }
+
+            CountdownSortOption.entries.forEach { option ->
+                val isSelected = option == currentSort
+                val optionIcon = when (option) {
+                    CountdownSortOption.CUSTOM -> Icons.Default.DragHandle
+                    CountdownSortOption.CHRONOLOGICAL_ASC -> Icons.Default.ArrowUpward
+                    CountdownSortOption.CHRONOLOGICAL_DESC -> Icons.Default.ArrowDownward
+                    CountdownSortOption.ALPHABETICAL_ASC,
+                    CountdownSortOption.ALPHABETICAL_DESC -> Icons.Default.SortByAlpha
+                }
+
+                Surface(
+                    onClick = { closeThen { onSelectSort(option) } },
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    },
+                    border = BorderStroke(
+                        width = if (isSelected) 1.5.dp else 1.dp,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        }
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .testTag("sort_option_${option.name.lowercase()}")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = optionIcon,
+                                contentDescription = null,
+                                tint = if (isSelected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+                            Column {
+                                Text(
+                                    text = option.menuLabel,
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
+                                    ),
+                                    color = if (isSelected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    }
+                                )
+                                Text(
+                                    text = option.subtitle,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CardOptionsSheet(
+    timer: CountdownEntity,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onDismiss: () -> Unit,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    var isDismissing by remember { mutableStateOf(false) }
+
+    fun closeThen(action: () -> Unit) {
+        if (isDismissing) return
+        isDismissing = true
+        scope.launch {
+            sheetState.hide()
+        }.invokeOnCompletion {
+            action()
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = timer.title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { closeThen(onDismiss) }) {
+                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                }
+            }
+
+            if (canMoveUp) {
+                CardOptionRow(
+                    icon = Icons.Default.ArrowUpward,
+                    label = "Move Up",
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    onClick = { closeThen(onMoveUp) }
+                )
+            }
+            if (canMoveDown) {
+                CardOptionRow(
+                    icon = Icons.Default.ArrowDownward,
+                    label = "Move Down",
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    onClick = { closeThen(onMoveDown) }
+                )
+            }
+            CardOptionRow(
+                icon = Icons.Default.Edit,
+                label = "Edit",
+                tint = MaterialTheme.colorScheme.onSurface,
+                onClick = { closeThen(onEdit) }
+            )
+            CardOptionRow(
+                icon = Icons.Default.Delete,
+                label = "Delete",
+                tint = MaterialTheme.colorScheme.error,
+                onClick = { closeThen(onDelete) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CardOptionRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(imageVector = icon, contentDescription = null, tint = tint)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = tint
+            )
         }
     }
 }

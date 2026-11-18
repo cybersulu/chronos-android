@@ -3,7 +3,7 @@
 **Effective Date:** November 10, 2026  
 **Last Updated:** November 10, 2026  
 **Application Name:** Chronos  
-**Package ID:** `com.aistudio.chronos.vktw`
+**Package ID:** `com.cybersulu.chronos`
 
 ---
 
