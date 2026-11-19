@@ -63,6 +63,10 @@
       color: var(--text-primary);
     }
 
+    .brand-link:hover {
+      text-decoration: none;
+    }
+
     .brand-icon {
       width: 40px;
       height: 40px;
@@ -74,6 +78,13 @@
       font-weight: 800;
       font-size: 1.15rem;
       letter-spacing: 0.08em;
+    }
+
+    .nav-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
     }
 
     .nav-links {
@@ -96,12 +107,48 @@
     .nav-links a:hover {
       background-color: rgba(255, 255, 255, 0.06);
       color: var(--text-primary);
+      text-decoration: none;
     }
 
     .nav-links a.active {
       background: rgba(99, 102, 241, 0.18);
       border-color: rgba(99, 102, 241, 0.45);
       color: #c7d2fe;
+    }
+
+    .play-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      background: linear-gradient(135deg, var(--accent-indigo), var(--accent-cyan));
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 0.52rem 1rem;
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(6, 182, 212, 0.28);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .play-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(99, 102, 241, 0.38);
+      text-decoration: none;
+      color: #ffffff;
+    }
+
+    .play-btn-lg {
+      padding: 0.78rem 1.35rem;
+      font-size: 0.98rem;
+      border-radius: 11px;
+    }
+
+    .play-icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
     }
 
     header.hero {
@@ -272,6 +319,32 @@
       text-decoration: underline;
     }
 
+    .install-cta-box {
+      margin-top: 2.25rem;
+      padding: 1.4rem 1.5rem;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.16), rgba(6, 182, 212, 0.14));
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .install-cta-text h3 {
+      margin-top: 0;
+      margin-bottom: 0.25rem;
+      font-size: 1.1rem;
+      color: var(--text-primary);
+    }
+
+    .install-cta-text p {
+      margin-bottom: 0;
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+    }
+
     footer {
       margin-top: 2.5rem;
       padding-top: 1.5rem;
@@ -299,10 +372,18 @@
         <img src="app-icon-512x512.png" alt="Chronos App Icon" class="brand-icon" />
         <span class="brand-title">CHRONOS</span>
       </a>
-      <div class="nav-links">
-        <a href="index.html" class="active">Overview</a>
-        <a href="user-manual.html">User Manual</a>
-        <a href="privacy-policy.html">Privacy Policy</a>
+      <div class="nav-actions">
+        <div class="nav-links">
+          <a href="index.html" class="active">Overview</a>
+          <a href="user-manual.html">User Manual</a>
+          <a href="privacy-policy.html">Privacy Policy</a>
+        </div>
+        <a class="play-btn" href="https://play.google.com/store/apps/details?id=com.cybersulu.chronos" target="_blank" rel="noopener noreferrer">
+          <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+            <path d="M3.6 1.9C3.2 2.3 3 2.8 3 3.5v17c0 .7.2 1.2.6 1.6l9.6-10.1L3.6 1.9zm10.3 9.4L4.4 1.5l12.4 7-2.9 2.8zm0 1.4l2.9 2.8-12.4 7 9.5-9.8zm3.8-3.6l3.2 1.8c.9.5.9 1.7 0 2.2l-3.2 1.8-3.1-2.9 3.1-2.9z"/>
+          </svg>
+          <span>Get on Google Play</span>
+        </a>
       </div>
     </nav>
 
@@ -313,7 +394,13 @@
         Track life's milestones, trips, deadlines, and celebrations down to the exact second across years, months, days, hours, minutes, and seconds — with global timezone synchronization, custom alerts, and home screen widgets.
       </p>
       <div class="cta-row">
-        <a class="btn btn-primary" href="user-manual.html">Read the User Manual</a>
+        <a class="play-btn play-btn-lg" href="https://play.google.com/store/apps/details?id=com.cybersulu.chronos" target="_blank" rel="noopener noreferrer">
+          <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+            <path d="M3.6 1.9C3.2 2.3 3 2.8 3 3.5v17c0 .7.2 1.2.6 1.6l9.6-10.1L3.6 1.9zm10.3 9.4L4.4 1.5l12.4 7-2.9 2.8zm0 1.4l2.9 2.8-12.4 7 9.5-9.8zm3.8-3.6l3.2 1.8c.9.5.9 1.7 0 2.2l-3.2 1.8-3.1-2.9 3.1-2.9z"/>
+          </svg>
+          <span>Install on Google Play</span>
+        </a>
+        <a class="btn btn-secondary" href="user-manual.html">Read the User Manual</a>
         <a class="btn btn-secondary" href="privacy-policy.html">Privacy Policy</a>
       </div>
       <img src="feature-graphic.png" alt="Chronos Feature Graphic showing countdown tiles" class="hero-banner" />
@@ -390,8 +477,21 @@
       </div>
     </section>
 
+    <aside class="install-cta-box" aria-label="Download Chronos">
+      <div class="install-cta-text">
+        <h3>Ready to start counting down?</h3>
+        <p>Download Chronos for Android on Google Play — offline, ad-free, and private by design.</p>
+      </div>
+      <a class="play-btn play-btn-lg" href="https://play.google.com/store/apps/details?id=com.cybersulu.chronos" target="_blank" rel="noopener noreferrer">
+        <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+          <path d="M3.6 1.9C3.2 2.3 3 2.8 3 3.5v17c0 .7.2 1.2.6 1.6l9.6-10.1L3.6 1.9zm10.3 9.4L4.4 1.5l12.4 7-2.9 2.8zm0 1.4l2.9 2.8-12.4 7 9.5-9.8zm3.8-3.6l3.2 1.8c.9.5.9 1.7 0 2.2l-3.2 1.8-3.1-2.9 3.1-2.9z"/>
+        </svg>
+        <span>Install on Google Play</span>
+      </a>
+    </aside>
+
     <footer>
-      &copy; 2026 Chronos &nbsp;&bull;&nbsp; <a href="user-manual.html">User Manual</a> &nbsp;&bull;&nbsp; <a href="privacy-policy.html">Privacy Policy</a> &nbsp;&bull;&nbsp; <a href="mailto:help@cybersulu.com">help@cybersulu.com</a>
+      &copy; 2026 Chronos &nbsp;&bull;&nbsp; <a href="index.html">Overview</a> &nbsp;&bull;&nbsp; <a href="user-manual.html">User Manual</a> &nbsp;&bull;&nbsp; <a href="privacy-policy.html">Privacy Policy</a> &nbsp;&bull;&nbsp; <a href="https://play.google.com/store/apps/details?id=com.cybersulu.chronos" target="_blank" rel="noopener noreferrer">Google Play</a> &nbsp;&bull;&nbsp; <a href="mailto:help@cybersulu.com">help@cybersulu.com</a>
     </footer>
   </main>
 </body>
