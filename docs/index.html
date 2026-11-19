@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chronos - Precision Countdown Timer for Android</title>
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-card: #1e293b;
+      --bg-surface: #0b1220;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --accent-indigo: #6366f1;
+      --accent-cyan: #06b6d4;
+      --accent-amber: #f59e0b;
+      --border-color: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2.5rem;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    .top-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-bottom: 1.25rem;
+      margin-bottom: 1.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .brand-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 1.15rem;
+      letter-spacing: 0.08em;
+    }
+
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.45rem 0.9rem;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+      transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .nav-links a:hover {
+      background-color: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+    }
+
+    .nav-links a.active {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.45);
+      color: #c7d2fe;
+    }
+
+    header.hero {
+      margin-bottom: 2.25rem;
+    }
+
+    .brand-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--accent-indigo), var(--accent-cyan));
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      margin-bottom: 0.75rem;
+    }
+
+    h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.25;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-lead {
+      font-size: 1.08rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.85rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.25rem;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-indigo), var(--accent-cyan));
+      color: #ffffff;
+    }
+
+    .btn-secondary {
+      background-color: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .hero-banner {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .summary-banner {
+      background: rgba(99, 102, 241, 0.12);
+      border-left: 4px solid var(--accent-indigo);
+      padding: 1rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      margin: 2rem 0;
+      color: var(--text-secondary);
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-top: 1.25rem;
+    }
+
+    .feature-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+
+    .feature-card h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-bottom: 0.45rem;
+    }
+
+    .feature-card p {
+      font-size: 0.94rem;
+      margin-bottom: 0;
+    }
+
+    .specs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 0.85rem;
+      margin-top: 1rem;
+    }
+
+    .spec-item {
+      background-color: rgba(15, 23, 42, 0.55);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+    }
+
+    .spec-label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .spec-value {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .spec-value code {
+      color: var(--accent-cyan);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9rem;
+    }
+
+    a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    footer {
+      margin-top: 2.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-color);
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 1.5rem;
+      }
+
+      h1 {
+        font-size: 1.7rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <nav class="top-nav" aria-label="Documentation Navigation">
+      <a class="brand-link" href="index.html">
+        <img src="app-icon-512x512.png" alt="Chronos App Icon" class="brand-icon" />
+        <span class="brand-title">CHRONOS</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html" class="active">Overview</a>
+        <a href="user-manual.html">User Manual</a>
+        <a href="privacy-policy.html">Privacy Policy</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <span class="brand-badge">Material 3 Android App</span>
+      <h1>Chronos — Precision Countdown Timer</h1>
+      <p class="hero-lead">
+        Track life's milestones, trips, deadlines, and celebrations down to the exact second across years, months, days, hours, minutes, and seconds — with global timezone synchronization, custom alerts, and home screen widgets.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="user-manual.html">Read the User Manual</a>
+        <a class="btn btn-secondary" href="privacy-policy.html">Privacy Policy</a>
+      </div>
+      <img src="feature-graphic.png" alt="Chronos Feature Graphic showing countdown tiles" class="hero-banner" />
+    </header>
+
+    <div class="summary-banner">
+      <strong>Private by Design:</strong> Chronos works completely offline. No account sign-in, no ads, and no analytics tracking — all of your countdown events, categories, notes, and widget preferences stay locally on your device.
+    </div>
+
+    <section>
+      <h2>Key Features</h2>
+      <div class="features-grid">
+        <article class="feature-card">
+          <h3>6-Unit Live Breakdown</h3>
+          <p>See every event count down second-by-second across Years, Months, Days, Hours, Minutes, and Seconds. Once an event arrives, Chronos seamlessly tracks elapsed time.</p>
+        </article>
+
+        <article class="feature-card">
+          <h3>Multi-Timezone Sync</h3>
+          <p>Set each countdown in its destination or event timezone. Inspect both the event's target timezone and your current local device time side-by-side.</p>
+        </article>
+
+        <article class="feature-card">
+          <h3>Custom Categories &amp; Badges</h3>
+          <p>Filter timers by Celebration, Milestone, Travel, Work, Personal, Fitness, Birthday, Gaming, or create and customize your own categories with unique icons and colors.</p>
+        </article>
+
+        <article class="feature-card">
+          <h3>Sorting &amp; Drag-and-Drop</h3>
+          <p>Sort chronologically (earliest or latest first), alphabetically (A–Z or Z–A), or long-press and drag any card handle to arrange your custom order.</p>
+        </article>
+
+        <article class="feature-card">
+          <h3>Customizable Alert Reminders</h3>
+          <p>Receive exact-time notifications when an event arrives plus multiple advance alerts (15 minutes, 1 hour, 1 day, 1 week, or any custom offset).</p>
+        </article>
+
+        <article class="feature-card">
+          <h3>Home &amp; Lock Screen Widgets</h3>
+          <p>Pin countdowns directly to your home screen in four responsive widget layouts: <strong>2×2 Square</strong>, <strong>3×1 Compact</strong>, <strong>4×1 Default</strong>, and <strong>5×1 Wide</strong>.</p>
+        </article>
+
+        <article class="feature-card">
+          <h3>Confetti &amp; One-Tap Sharing</h3>
+          <p>Celebrate milestone arrivals with interactive confetti and haptic feedback, and share formatted countdown summaries to any messaging app.</p>
+        </article>
+
+        <article class="feature-card">
+          <h3>Offline &amp; Ad-Free</h3>
+          <p>Built natively with Kotlin, Jetpack Compose, and Android Room for fast performance with zero network permissions, zero ads, and zero tracking.</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>App Details</h2>
+      <div class="specs-grid">
+        <div class="spec-item">
+          <div class="spec-label">Package ID</div>
+          <div class="spec-value"><code>com.cybersulu.chronos</code></div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Platform</div>
+          <div class="spec-value">Android 7.0+ (API 24+)</div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Storage</div>
+          <div class="spec-value">100% Local (Room SQLite)</div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Support Email</div>
+          <div class="spec-value"><a href="mailto:help@cybersulu.com">help@cybersulu.com</a></div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      &copy; 2026 Chronos &nbsp;&bull;&nbsp; <a href="user-manual.html">User Manual</a> &nbsp;&bull;&nbsp; <a href="privacy-policy.html">Privacy Policy</a> &nbsp;&bull;&nbsp; <a href="mailto:help@cybersulu.com">help@cybersulu.com</a>
+    </footer>
+  </main>
+</body>
+</html>

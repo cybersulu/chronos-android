@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Manual - Chronos</title>
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-card: #1e293b;
+      --bg-surface: #0b1220;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --accent-indigo: #6366f1;
+      --accent-cyan: #06b6d4;
+      --border-color: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2.5rem;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    .top-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-bottom: 1.25rem;
+      margin-bottom: 1.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .brand-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 1.15rem;
+      letter-spacing: 0.08em;
+    }
+
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.45rem 0.9rem;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+      transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .nav-links a:hover {
+      background-color: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+    }
+
+    .nav-links a.active {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.45);
+      color: #c7d2fe;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .brand-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--accent-indigo), var(--accent-cyan));
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      margin-bottom: 0.75rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .meta {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+
+    .toc {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .toc h2 {
+      margin-top: 0;
+      font-size: 1rem;
+      border-bottom: none;
+      padding-bottom: 0;
+      margin-bottom: 0.65rem;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .toc ol {
+      margin-left: 1.25rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 0.35rem 1.25rem;
+    }
+
+    .toc li {
+      margin-bottom: 0.2rem;
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-top: 2.25rem;
+      margin-bottom: 0.85rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      margin-top: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+    }
+
+    ul, ol {
+      color: var(--text-secondary);
+      margin-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    li {
+      margin-bottom: 0.55rem;
+    }
+
+    strong {
+      color: var(--text-primary);
+    }
+
+    .tip-box {
+      background: rgba(6, 182, 212, 0.1);
+      border-left: 4px solid var(--accent-cyan);
+      padding: 0.9rem 1.2rem;
+      border-radius: 0 8px 8px 0;
+      margin: 1rem 0 1.25rem;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0 1.5rem;
+      font-size: 0.94rem;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.8rem 1rem;
+      border: 1px solid var(--border-color);
+      vertical-align: top;
+    }
+
+    th {
+      background-color: rgba(15, 23, 42, 0.6);
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    td {
+      color: var(--text-secondary);
+    }
+
+    a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    footer {
+      margin-top: 2.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-color);
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 1.5rem;
+      }
+
+      h1 {
+        font-size: 1.6rem;
+      }
+
+      th, td {
+        padding: 0.65rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <nav class="top-nav" aria-label="Documentation Navigation">
+      <a class="brand-link" href="index.html">
+        <img src="app-icon-512x512.png" alt="Chronos App Icon" class="brand-icon" />
+        <span class="brand-title">CHRONOS</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html">Overview</a>
+        <a href="user-manual.html" class="active">User Manual</a>
+        <a href="privacy-policy.html">Privacy Policy</a>
+      </div>
+    </nav>
+
+    <header>
+      <span class="brand-badge">Chronos Guide</span>
+      <h1>User Manual</h1>
+      <p class="meta">Everything you need to create, organize, customize, and track countdowns in Chronos.</p>
+    </header>
+
+    <nav class="toc" aria-label="Table of Contents">
+      <h2>Contents</h2>
+      <ol>
+        <li><a href="#dashboard">The Main Dashboard</a></li>
+        <li><a href="#create-edit">Creating &amp; Editing Countdowns</a></li>
+        <li><a href="#notifications">Alert Notifications</a></li>
+        <li><a href="#categories">Managing Categories</a></li>
+        <li><a href="#sorting-reordering">Sorting &amp; Reordering Cards</a></li>
+        <li><a href="#detail-view">Event Overview, Confetti &amp; Sharing</a></li>
+        <li><a href="#widgets">Home &amp; Lock Screen Widgets</a></li>
+        <li><a href="#troubleshooting">Tips &amp; Troubleshooting</a></li>
+      </ol>
+    </nav>
+
+    <section id="dashboard">
+      <h2>1. The Main Dashboard</h2>
+      <p>
+        When you open Chronos, the main screen displays all of your active countdown cards along with a live count of tracked events under the <strong>CHRONOS</strong> header.
+      </p>
+      <ul>
+        <li><strong>Live 6-Unit Display:</strong> Each card updates every second, showing <strong>Years (YRS)</strong>, <strong>Months (MOS)</strong>, <strong>Days (DAYS)</strong>, <strong>Hours (HRS)</strong>, <strong>Minutes (MINS)</strong>, and <strong>Seconds (SECS)</strong> on a single row.</li>
+        <li><strong>Arrived Events:</strong> Once an event's target date passes, the card switches to elapsed time and displays an <em>"Event has arrived! (Counting elapsed time)"</em> banner.</li>
+        <li><strong>Quick Actions:</strong> Tap any card to open its full Event Overview, tap the <strong>⋮</strong> button on the top-right of a card for quick actions (Move Up, Move Down, Edit, Delete), or tap <strong>+ New Event</strong> at the bottom right to create a countdown.</li>
+      </ul>
+    </section>
+
+    <section id="create-edit">
+      <h2>2. Creating &amp; Editing Countdowns</h2>
+      <ol>
+        <li>Tap the <strong>+ New Event</strong> button in the bottom-right corner (or choose <strong>Edit</strong> from an existing card's <strong>⋮</strong> menu or Event Overview screen).</li>
+        <li><strong>Event Title:</strong> Enter a descriptive title (e.g., <em>"Tokyo Trip"</em> or <em>"Launch Day"</em>).</li>
+        <li><strong>Category:</strong> Tap a category chip to assign a color and icon to your countdown.</li>
+        <li><strong>Target Date &amp; Time:</strong> Tap the Date card to pick the calendar date, and tap the Time card to select the exact hour and minute.</li>
+        <li><strong>Time Zone:</strong> Tap the Time Zone selector to search and pick any global city or IANA timezone (e.g., <code>America/New_York</code>, <code>Asia/Tokyo</code>, or <code>UTC</code>). Chronos calculates the countdown accurately relative to that timezone.</li>
+        <li><strong>Notes (Optional):</strong> Add reminders, flight numbers, checklists, or event details.</li>
+        <li>Tap <strong>Save Countdown</strong> (or <strong>Update Countdown</strong>) to store the event and schedule its alerts.</li>
+      </ol>
+    </section>
+
+    <section id="notifications">
+      <h2>3. Alert Notifications</h2>
+      <p>Chronos supports both completion alerts and multiple advance reminders per event.</p>
+      <ol>
+        <li>In the Add/Edit Countdown screen, ensure the <strong>Alert Notifications</strong> toggle is enabled.</li>
+        <li>Select one or more preset reminder chips:
+          <ul>
+            <li><strong>At event time</strong></li>
+            <li><strong>15m before</strong></li>
+            <li><strong>1h before</strong></li>
+            <li><strong>1d before</strong></li>
+            <li><strong>1w before</strong></li>
+          </ul>
+        </li>
+        <li>Need a different reminder? Tap <strong>+ Custom</strong> to enter any custom offset in minutes, hours, days, or weeks.</li>
+      </ol>
+      <div class="tip-box">
+        <strong>Permission Note:</strong> On Android 13 and newer, allow <strong>Notifications</strong> when prompted so Chronos can deliver your scheduled reminders on time.
+      </div>
+    </section>
+
+    <section id="categories">
+      <h2>4. Managing Categories</h2>
+      <p>The scrollable category bar at the top of the dashboard lets you filter countdowns and see how many events belong to each category.</p>
+      <ul>
+        <li><strong>Filter Events:</strong> Tap any category pill (or <strong>All</strong>) to filter your countdown list.</li>
+        <li><strong>Edit Active Category:</strong> When a specific category is selected, tap the small pencil icon inside its pill to rename it, change its icon, change its accent color, or delete it.</li>
+        <li><strong>Create a Category:</strong> Tap <strong>+ New Category</strong> at the end of the filter bar (or inside the Add/Edit Countdown screen).</li>
+        <li><strong>Manage All Categories:</strong> Tap <strong>Manage</strong> to view all categories in one sheet, see event counts, edit existing categories, or create new ones.</li>
+      </ul>
+    </section>
+
+    <section id="sorting-reordering">
+      <h2>5. Sorting &amp; Reordering Cards</h2>
+      <h3>Sorting Options</h3>
+      <p>Tap the <strong>Sort</strong> button in the top-right corner of the app bar to open the Sort Countdowns sheet and choose from five modes:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Sort Mode</th>
+            <th>Behavior</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Chronological (Earliest first)</strong></td>
+            <td>Orders countdowns from soonest / oldest timestamp to latest.</td>
+          </tr>
+          <tr>
+            <td><strong>Chronological (Latest first)</strong></td>
+            <td>Orders countdowns from farthest target date to earliest.</td>
+          </tr>
+          <tr>
+            <td><strong>Alphabetical (A to Z)</strong></td>
+            <td>Sorts events alphabetically by title (case-insensitive).</td>
+          </tr>
+          <tr>
+            <td><strong>Alphabetical (Z to A)</strong></td>
+            <td>Sorts events in reverse alphabetical order by title.</td>
+          </tr>
+          <tr>
+            <td><strong>Custom Order</strong></td>
+            <td>Displays cards in your manually arranged drag-and-drop order.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Drag-and-Drop Reordering</h3>
+      <ul>
+        <li>Grab the <strong>drag handle (≡)</strong> in the top-right area of any countdown card (by dragging directly or long-pressing) and slide the card up or down.</li>
+        <li>Drag near the top or bottom edge of the list to smoothly auto-scroll through off-screen cards.</li>
+        <li>You can also tap a card's <strong>⋮</strong> menu and choose <strong>Move Up</strong> or <strong>Move Down</strong>.</li>
+        <li>Manually moving a card automatically saves the new order and switches the sort mode to <strong>Custom Order</strong>.</li>
+      </ul>
+    </section>
+
+    <section id="detail-view">
+      <h2>6. Event Overview, Confetti &amp; Sharing</h2>
+      <p>Tapping any countdown card opens the <strong>Event Overview</strong> screen:</p>
+      <ul>
+        <li><strong>Full Countdown Grid:</strong> Displays large, easy-to-read cards for Years, Months, Days, Hours, Minutes, and Seconds.</li>
+        <li><strong>Time Zone Synchronization:</strong> Compares the <em>Event Timezone</em> directly against <em>Your Local Time</em> so you never miss a cross-timezone event.</li>
+        <li><strong>Celebrate Button:</strong> Triggers a confetti animation and vibration feedback (also triggered automatically when you view an event right as it reaches zero).</li>
+        <li><strong>Share Countdown:</strong> Tap <strong>Share Countdown</strong> to send a formatted snapshot of the remaining time, date, and timezone via any app.</li>
+      </ul>
+    </section>
+
+    <section id="widgets">
+      <h2>7. Home &amp; Lock Screen Widgets</h2>
+      <p>Chronos provides four home screen widget sizes that update automatically every minute:</p>
+      <ul>
+        <li><strong>2×2 Square:</strong> Compact square layout showing the countdown and date.</li>
+        <li><strong>3×1 Compact:</strong> Minimal single-row bar for dense home screens.</li>
+        <li><strong>4×1 Default:</strong> Balanced horizontal countdown card.</li>
+        <li><strong>5×1 Wide:</strong> Expanded wide widget displaying full interval details.</li>
+      </ul>
+      <h3>Adding a Widget</h3>
+      <ol>
+        <li>Long-press an empty area on your Android home screen and select <strong>Widgets</strong>.</li>
+        <li>Find <strong>Chronos</strong> and drag your preferred widget size onto the home screen.</li>
+        <li>In the <strong>Select Widget Timer</strong> screen, pick the countdown you want that widget to track (you can place multiple widgets tracking different events).</li>
+        <li>Tap any placed widget at any time to open that event's detail screen in Chronos.</li>
+      </ol>
+    </section>
+
+    <section id="troubleshooting">
+      <h2>8. Tips &amp; Troubleshooting</h2>
+      <ul>
+        <li><strong>Delayed Notifications or Widgets:</strong> Some Android devices apply aggressive battery optimization. If alerts or widgets pause in the background, set Chronos's battery usage to <em>Unrestricted</em> in Android Settings and confirm Notifications and Alarms &amp; Reminders permissions are enabled.</li>
+        <li><strong>Deleting All Data:</strong> You can delete individual events anytime, or clear all stored data via <strong>Android Settings → Apps → Chronos → Storage &amp; cache → Clear storage</strong>.</li>
+        <li><strong>Need Help?</strong> Reach out to us at <a href="mailto:help@cybersulu.com">help@cybersulu.com</a>.</li>
+      </ul>
+    </section>
+
+    <footer>
+      &copy; 2026 Chronos &nbsp;&bull;&nbsp; <a href="index.html">Overview</a> &nbsp;&bull;&nbsp; <a href="privacy-policy.html">Privacy Policy</a> &nbsp;&bull;&nbsp; <a href="mailto:help@cybersulu.com">help@cybersulu.com</a>
+    </footer>
+  </main>
+</body>
+</html>

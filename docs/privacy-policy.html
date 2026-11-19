@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Privacy Policy - Chronos</title>
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
   <style>
     :root {
       --bg-primary: #0f172a;
@@ -38,6 +40,67 @@
       border-radius: 16px;
       padding: 2.5rem;
       box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    .top-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-bottom: 1.25rem;
+      margin-bottom: 1.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .brand-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 1.15rem;
+      letter-spacing: 0.08em;
+    }
+
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.45rem 0.9rem;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+      transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .nav-links a:hover {
+      background-color: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .nav-links a.active {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.45);
+      color: #c7d2fe;
     }
 
     header {
@@ -194,6 +257,18 @@
 </head>
 <body>
   <main class="container">
+    <nav class="top-nav" aria-label="Documentation Navigation">
+      <a class="brand-link" href="index.html">
+        <img src="app-icon-512x512.png" alt="Chronos App Icon" class="brand-icon" />
+        <span class="brand-title">CHRONOS</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html">Overview</a>
+        <a href="user-manual.html">User Manual</a>
+        <a href="privacy-policy.html" class="active">Privacy Policy</a>
+      </div>
+    </nav>
+
     <header>
       <span class="brand-badge">Chronos</span>
       <h1>Privacy Policy</h1>
@@ -326,7 +401,7 @@
     </section>
 
     <footer>
-      &copy; 2026 Chronos. All rights reserved.
+      &copy; 2026 Chronos &nbsp;&bull;&nbsp; <a href="index.html">Overview</a> &nbsp;&bull;&nbsp; <a href="user-manual.html">User Manual</a> &nbsp;&bull;&nbsp; <a href="mailto:help@cybersulu.com">help@cybersulu.com</a>
     </footer>
   </main>
 </body>
